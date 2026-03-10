@@ -276,21 +276,31 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
     )}
 
     <div style={CARD}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 10 }}>Contratos Ativos Recentes</div>
-      {contratos.filter(c => c.status === "ativo").slice(0, 5).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato ativo</div>}
-      {contratos.filter(c => c.status === "ativo").slice(0, 5).map((c, i, arr) => {
-        var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
-        var pagAtrasado = c.status === "ativo" && (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
-        return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)} {pagAtrasado && <span style={{ color: C.red, fontSize: 11 }}>● PAG. ATRASADO</span>}</div>
-            <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
-            <div style={{ fontSize: 12, color: C.sub }}>{fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
-            {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub }}>📆 Pagar ate: {fmtDate(c.previsao_pagamento)}</div>}
-          </div>
-          <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div><span style={Badge(pagAtrasado ? C.red : C.blue)}>{pagAtrasado ? "pag. atrasado" : "ativo"}</span></div>
-        </div>;
-      })}
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 10 }}>Mês Vigente — Contratos</div>
+      {(() => {
+        var mesAtual = new Date().toISOString().slice(0,7);
+        var ctsMes = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesAtual);
+        if (ctsMes.length === 0) return <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato com pagamento neste mês</div>;
+        return ctsMes.map((c, i) => {
+          var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
+          var pago = c.status_pagamento === "pago" || c.status_pagamento === "isento";
+          var atrasado = !pago && c.previsao_pagamento && c.previsao_pagamento < hoje;
+          var cor = pago ? C.green : atrasado ? C.red : C.orange;
+          var label = pago ? "recebido" : atrasado ? "atrasado" : "pendente";
+          return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < ctsMes.length - 1 ? "1px solid " + C.border : "none" }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>📆 Pagar ate: {fmtDate(c.previsao_pagamento)}</div>
+              {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal }}>💳 {c.forma_pagamento}</div>}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div>
+              <span style={Badge(cor)}>{label}</span>
+            </div>
+          </div>;
+        });
+      })()}
     </div>
   </div>;
 }
