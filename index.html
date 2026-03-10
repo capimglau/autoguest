@@ -476,8 +476,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
   const [form, setForm] = useState({});
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState("todos");
-  const [dispModal, setDispModal] = useState(false);
+  const [filter, setFilter] = useState("mes_vigente");
   const [dispDe, setDispDe] = useState("");
   const [dispAte, setDispAte] = useState("");
   const [filDe, setFilDe] = useState("");
@@ -522,7 +521,8 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     if (cl && cl.vencimento_cnh && cl.vencimento_cnh < hoje) { if (!confirm("CNH do cliente VENCIDA em " + cl.vencimento_cnh + ". Continuar mesmo assim?")) return; }
     setLoading(true);
     try {
-      const payload = Object.assign({}, form, { valor_total: (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2) });
+      const valorFinal = form.valor_total !== undefined && form.valor_total !== "" ? parseFloat(form.valor_total).toFixed(2) : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2);
+      const payload = Object.assign({}, form, { valor_total: valorFinal });
       if (edit) { const u = await db.patch("contratos", edit, payload); setContratos(p => p.map(c => c.id === edit ? Object.assign({}, c, u) : c)); toast("Atualizado!"); }
       else { const c = await db.post("contratos", payload); setContratos(p => [c].concat(p)); await db.patch("veiculos", form.veiculo_id, { status: "alugado" }); setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: "alugado" }) : v)); toast("Contrato No " + numCt(c.id) + " criado!"); }
       setModal(false);
@@ -617,7 +617,6 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         ["todos", "Todos", C.gray],
         ["ativo", "Ativos", C.blue],
         ["concluido", "Concluidos", C.green],
-        ["cancelado", "Cancelados", C.red],
         ["mes_vigente", "Mês Vigente", C.teal],
         ["proximo_mes", "Próx. Mês", C.purple],
         ["a_receber", "A Receber", C.orange],
@@ -717,17 +716,11 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               <Lbl label="Desconto (R$)" flex={1}><input style={FI} type="number" step="0.01" min="0" value={form.desconto || ""} onChange={e => F("desconto", e.target.value)} placeholder="0,00" /></Lbl>
               <Lbl label="Acrescimo (R$)" flex={1}><input style={FI} type="number" step="0.01" min="0" value={form.acrescimo || ""} onChange={e => F("acrescimo", e.target.value)} placeholder="0,00" /></Lbl>
             </div>
-            <div style={{ textAlign: "center" }}>
-              {(parseFloat(form.desconto||0) > 0 || parseFloat(form.acrescimo||0) > 0) && (
-                <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>
-                  Base: {fmtBRL(calcValor(form))}
-                  {parseFloat(form.desconto||0) > 0 && <span style={{ color: C.green }}> - desc. {fmtBRL(form.desconto)}</span>}
-                  {parseFloat(form.acrescimo||0) > 0 && <span style={{ color: C.red }}> + acresc. {fmtBRL(form.acrescimo)}</span>}
-                </div>
-              )}
-              <span style={{ fontSize: 12, color: C.sub }}>Total: </span>
-              <span style={{ fontWeight: 800, fontSize: 22, color: C.green }}>{fmtBRL((parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2))}</span>
-              <span style={{ fontSize: 12, color: C.sub }}> ({dias(form)} dias)</span>
+            <div style={{ marginBottom: 10 }}>
+              <Lbl label="Valor Total (editavel)">
+                <input style={Object.assign({}, FI, { fontWeight: 700, fontSize: 16, color: C.green })} type="number" step="0.01" value={form.valor_total !== undefined && form.valor_total !== "" ? form.valor_total : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2)} onChange={e => F("valor_total", e.target.value)} />
+              </Lbl>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>Base calculada: {fmtBRL(calcValor(form))} · {dias(form)} dias{parseFloat(form.desconto||0)>0 ? " · desc. " + fmtBRL(form.desconto) : ""}{parseFloat(form.acrescimo||0)>0 ? " · acresc. " + fmtBRL(form.acrescimo) : ""}</div>
             </div>
           </div>
         )}
