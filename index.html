@@ -213,7 +213,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const em30dias = new Date(); em30dias.setDate(em30dias.getDate() + 30); const str30 = em30dias.toISOString().split("T")[0];
   const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
 
-  const contratosAtrasados = contratos.filter(c => (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje);
+  const contratosAtrasados = contratos.filter(c => c.status === "ativo" && (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje);
   const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7);
   const cnhVencida = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh < hoje);
   const cnhVencendo = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh >= hoje && c.vencimento_cnh <= str30);
@@ -280,14 +280,15 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       {contratos.filter(c => c.status === "ativo").slice(0, 5).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato ativo</div>}
       {contratos.filter(c => c.status === "ativo").slice(0, 5).map((c, i, arr) => {
         var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
-        var atrasado = c.data_fim && c.data_fim < hoje;
+        var pagAtrasado = c.status === "ativo" && (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
         return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)} {atrasado && <span style={{ color: C.red, fontSize: 11 }}>● ATRASADO</span>}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)} {pagAtrasado && <span style={{ color: C.red, fontSize: 11 }}>● PAG. ATRASADO</span>}</div>
             <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
-            <div style={{ fontSize: 12, color: atrasado ? C.red : C.sub }}>{fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>{fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
+            {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub }}>📆 Pagar ate: {fmtDate(c.previsao_pagamento)}</div>}
           </div>
-          <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div><span style={Badge(atrasado ? C.red : C.blue)}>{atrasado ? "atrasado" : "ativo"}</span></div>
+          <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div><span style={Badge(pagAtrasado ? C.red : C.blue)}>{pagAtrasado ? "pag. atrasado" : "ativo"}</span></div>
         </div>;
       })}
     </div>
@@ -547,9 +548,13 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       previsao_pagamento: novaPrevPag
     };
     try {
+      // Conclui o contrato original e marca como pago
+      await db.patch("contratos", ct.id, { status: "concluido", status_pagamento: ct.status_pagamento === "pago" ? "pago" : "pago" });
+      setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, { status: "concluido" }) : c));
+      // Cria o novo contrato (veiculo continua alugado)
       const novo = await db.post("contratos", payload);
       setContratos(p => [novo].concat(p));
-      toast("Contrato renovado! Novo No " + numCt(novo.id));
+      toast("Renovado! Contrato anterior concluido. Novo No " + numCt(novo.id));
     } catch(e) { toast("Erro ao renovar: " + e.message, "error"); }
   }
   async function concluir(ct) {
