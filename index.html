@@ -213,7 +213,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const em30dias = new Date(); em30dias.setDate(em30dias.getDate() + 30); const str30 = em30dias.toISOString().split("T")[0];
   const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
 
-  const contratosAtrasados = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim < hoje);
+  const contratosAtrasados = contratos.filter(c => c.status === "ativo" && c.previsao_pagamento && c.previsao_pagamento < hoje);
   const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7);
   const cnhVencida = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh < hoje);
   const cnhVencendo = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh >= hoje && c.vencimento_cnh <= str30);
@@ -254,24 +254,24 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
     {(contratosAtrasados.length > 0 || contratosVencendo.length > 0 || cnhVencida.length > 0 || cnhVencendo.length > 0 || multasPend.length > 0 || contasVencidas.length > 0 || contasVencendo.length > 0 || manutProlongadas.length > 0) && (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Central de Alertas</div>
-        <AlertBox cor={C.red} icon="🚨" titulo={"Contratos ATRASADOS (" + contratosAtrasados.length + ")"}
-          items={contratosAtrasados.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · venceu em " + c.data_fim; })}
+        <AlertBox cor={C.red} icon="🚨" titulo={"Pagamentos ATRASADOS (" + contratosAtrasados.length + ")"}
+          items={contratosAtrasados.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · pagar ate " + fmtDate(c.previsao_pagamento); })}
           sub={"Total em atraso: " + fmtBRL(contratosAtrasados.reduce((s,c)=>s+parseFloat(c.valor_total||0),0))} />
         <AlertBox cor={C.orange} icon="⏰" titulo={"Contratos vencendo em 7 dias (" + contratosVencendo.length + ")"}
-          items={contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · ate " + c.data_fim; })} />
+          items={contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · ate " + fmtDate(c.data_fim); })} />
         <AlertBox cor={C.red} icon="🪪" titulo={"CNH Vencida (" + cnhVencida.length + ")"}
-          items={cnhVencida.map(c => c.nome + " · venceu em " + c.vencimento_cnh)} />
+          items={cnhVencida.map(c => c.nome + " · venceu em " + fmtDate(c.vencimento_cnh))} />
         <AlertBox cor={C.orange} icon="🪪" titulo={"CNH vencendo em 30 dias (" + cnhVencendo.length + ")"}
-          items={cnhVencendo.map(c => c.nome + " · vence em " + c.vencimento_cnh)} />
+          items={cnhVencendo.map(c => c.nome + " · vence em " + fmtDate(c.vencimento_cnh))} />
         <AlertBox cor={C.red} icon="💸" titulo={"Contas VENCIDAS (" + contasVencidas.length + ")"}
-          items={contasVencidas.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · venceu em " + c.vencimento)}
+          items={contasVencidas.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · venceu em " + fmtDate(c.vencimento))}
           sub={"Total vencido: " + fmtBRL(contasVencidas.reduce((s,c)=>s+parseFloat(c.valor||0),0))} />
         <AlertBox cor={C.orange} icon="💰" titulo={"Contas vencendo em 3 dias (" + contasVencendo.length + ")"}
-          items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · vence em " + c.vencimento)} />
+          items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · vence em " + fmtDate(c.vencimento))} />
         <AlertBox cor={C.orange} icon="⚠️" titulo={"Multas pendentes (" + multasPend.length + ")"}
           items={[fmtBRL(multasPend.reduce((s,m)=>s+parseFloat(m.valor||0),0)) + " em multas aguardando pagamento"]} />
         <AlertBox cor={C.purple} icon="🔧" titulo={"Manutencoes com prazo vencido (" + manutProlongadas.length + ")"}
-          items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " - " + m.tipo + " · prevista para " + m.data_saida; })} />
+          items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " - " + m.tipo + " · prevista para " + fmtDate(m.data_saida); })} />
       </div>
     )}
 
