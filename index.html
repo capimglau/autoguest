@@ -529,7 +529,37 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     } catch(e) { toast("Erro: " + e.message, "error"); }
     setLoading(false);
   }
-  async function remove(id) { if (!confirm("Excluir?")) return; await db.del("contratos", id); setContratos(p => p.filter(c => c.id !== id)); toast("Excluido!"); }
+  async function renovar(ct) {
+    if (!confirm("Renovar contrato por mais 30 dias?")) return;
+    var dataInicio = ct.data_fim;
+    var dataFim = new Date(ct.data_fim);
+    dataFim.setDate(dataFim.getDate() + 30);
+    var novaFim = dataFim.toISOString().split("T")[0];
+    var novaPrevPag = "";
+    if (ct.previsao_pagamento) {
+      var diaOriginal = parseInt(ct.previsao_pagamento.split("-")[2]);
+      var proxMes = new Date(ct.previsao_pagamento);
+      proxMes.setMonth(proxMes.getMonth() + 1);
+      proxMes.setDate(diaOriginal);
+      novaPrevPag = proxMes.toISOString().split("T")[0];
+    }
+    var payload = {
+      cliente_id: ct.cliente_id, veiculo_id: ct.veiculo_id,
+      data_inicio: dataInicio, data_fim: novaFim,
+      km_inicial: ct.km_final || ct.km_inicial, km_final: null,
+      km_franquia: ct.km_franquia, valor_km_excedente: ct.valor_km_excedente,
+      valor_total: ct.valor_total, status: "ativo",
+      status_pagamento: "pendente",
+      forma_pagamento: ct.forma_pagamento,
+      previsao_pagamento: novaPrevPag,
+      observacoes: "Renovacao do contrato #" + numCt(ct.id)
+    };
+    try {
+      const novo = await db.post("contratos", payload);
+      setContratos(p => [novo].concat(p));
+      toast("Contrato renovado! Novo No " + numCt(novo.id));
+    } catch(e) { toast("Erro ao renovar: " + e.message, "error"); }
+  }
   async function concluir(ct) {
     if (!confirm("Concluir e liberar veiculo?")) return;
     await db.patch("contratos", ct.id, { status: "concluido" }); await db.patch("veiculos", ct.veiculo_id, { status: "disponivel" });
@@ -594,6 +624,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {c.status === "ativo" && <button style={Btn(C.green, true)} onClick={() => concluir(c)}>Concluir</button>}
+            {c.status === "ativo" && <button style={Btn(C.purple, true)} onClick={() => renovar(c)}>🔄 Renovar</button>}
             {(c.status_pagamento === "pendente" || !c.status_pagamento) && <button style={Btn(C.teal, true)} onClick={async () => { await db.patch("contratos", c.id, { status_pagamento: "pago" }); setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x)); toast("Pagamento registrado!"); }}>💰 Pago</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
             <button style={Btn(C.blue, true)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
