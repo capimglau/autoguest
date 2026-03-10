@@ -252,14 +252,15 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       {totalAlertas > 0 && <div style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "4px 14px", fontSize: 13, fontWeight: 700 }}>⚠️ {totalAlertas}</div>}
     </div>
 
-    <div style={{ background: "linear-gradient(135deg, #007AFF 0%, #0055CC 100%)", borderRadius: 20, padding: "20px 20px 16px", color: "#fff" }}>
-      <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Recebido em {nomeMes}</div>
-      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>{fmtBRL(recMes)}</div>
-      <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>de {fmtBRL(prevMes)} previstos</div>
-      <div style={{ display: "flex", gap: 20, marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.2)" }}>
-        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 18, fontWeight: 800 }}>{pagosMes}</div></div>
-        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 18, fontWeight: 800, color: pendMes > 0 ? "#FFD60A" : "#fff" }}>{pendMes}</div></div>
-        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 18, fontWeight: 800, color: contratosAtrasados.length > 0 ? "#FF6B6B" : "#fff" }}>{contratosAtrasados.length}</div></div>
+
+    <div style={{ background: "#fff", borderRadius: 20, padding: "20px 20px 16px", border: "1px solid " + C.border }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Previsão de Faturamento — {nomeMes}</div>
+      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, color: "#1C1C1E" }}>{fmtBRL(prevMes)}</div>
+      <div style={{ fontSize: 13, color: C.sub, marginTop: 4 }}>previstos neste mês</div>
+      <div style={{ display: "flex", gap: 20, marginTop: 16, paddingTop: 14, borderTop: "1px solid " + C.border }}>
+        <div><div style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{pagosMes}</div></div>
+        <div><div style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 18, fontWeight: 800, color: pendMes > 0 ? C.orange : "#1C1C1E" }}>{pendMes}</div></div>
+        <div><div style={{ fontSize: 11, color: C.sub, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 18, fontWeight: 800, color: contratosAtrasados.length > 0 ? C.red : "#1C1C1E" }}>{contratosAtrasados.length}</div></div>
       </div>
     </div>
 
@@ -292,10 +293,10 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       </div>
 
       <div style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px" }}>
-        <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Multas</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: multasPend.length > 0 ? C.orange : "#1C1C1E", marginTop: 4 }}>{multasPend.length}</div>
-        <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 2 }}>pendentes</div>
-        <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>Total: <span style={{ fontWeight: 700 }}>{fmtBRL(multasPend.reduce((s,m)=>s+parseFloat(m.valor||0),0))}</span></div>
+        <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Recebido</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: C.green, marginTop: 4 }}>{fmtBRL(recMes)}</div>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 2 }}>neste mês</div>
+        <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>Multas pend.: <span style={{ color: multasPend.length > 0 ? C.orange : C.sub, fontWeight: 700 }}>{multasPend.length}</span></div>
       </div>
     </div>
 
