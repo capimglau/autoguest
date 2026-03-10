@@ -477,6 +477,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("mes_vigente");
+  const [dispModal, setDispModal] = useState(false);
   const [dispDe, setDispDe] = useState("");
   const [dispAte, setDispAte] = useState("");
   const [filDe, setFilDe] = useState("");
@@ -484,14 +485,6 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
   const [filVeiculo, setFilVeiculo] = useState("");
   const [filCliente, setFilCliente] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
-  const fil = contratos.filter(c => {
-    if (filter !== "todos" && c.status !== filter) return false;
-    if (filDe && c.data_inicio && c.data_inicio < filDe) return false;
-    if (filAte && c.data_fim && c.data_fim > filAte) return false;
-    if (filVeiculo && String(c.veiculo_id) !== filVeiculo) return false;
-    if (filCliente && String(c.cliente_id) !== filCliente) return false;
-    return true;
-  });
   const temFiltro = filDe || filAte || filVeiculo || filCliente;
   function limparFiltros() { setFilDe(""); setFilAte(""); setFilVeiculo(""); setFilCliente(""); }
   const hoje = new Date().toISOString().split("T")[0];
@@ -614,13 +607,13 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     </div>}
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       {[
-        ["todos", "Todos", C.gray],
-        ["ativo", "Ativos", C.blue],
-        ["concluido", "Concluidos", C.green],
         ["mes_vigente", "Mês Vigente", C.teal],
-        ["proximo_mes", "Próx. Mês", C.purple],
         ["a_receber", "A Receber", C.orange],
         ["recebidos_mes", "Recebidos/Mês", C.green],
+        ["proximo_mes", "Próx. Mês", C.purple],
+        ["ativo", "Todos Ativos", C.blue],
+        ["concluido", "Concluidos", C.gray],
+        ["todos", "Todos", C.gray],
       ].map(([val, label, cor]) => (
         <button key={val} onClick={() => setFilter(val)} style={Object.assign({}, Ghost(filter === val ? cor : C.gray), { background: filter === val ? cor : "transparent", color: filter === val ? "#fff" : C.gray, fontSize: 12 })}>{label}</button>
       ))}
