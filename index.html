@@ -197,18 +197,47 @@ function shareWhatsApp(ct, cl, ve, emp) {
 }
 
 // ── INICIO ─────────────────────────────────────────────────────────────────
-function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas }) {
+function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, receitas, contas }) {
   const disp = veiculos.filter(v => v.status === "disponivel").length;
   const ativos = contratos.filter(c => c.status === "ativo").length;
   const mPend = multas.filter(m => m.status === "pendente").length;
   const manAt = manutencoes.filter(m => m.status === "em_andamento").length;
-  const receita = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  const receitaContratos = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  const receitaManual = (receitas || []).reduce((s, r) => s + parseFloat(r.valor || 0), 0);
+  const totalReceita = receitaContratos + receitaManual;
   const totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
-  const lucro = receita - totalDesp;
+  const lucro = totalReceita - totalDesp;
   const hoje = new Date().toISOString().split("T")[0];
-  const cnhAlerta = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh <= hoje);
+  const em7dias = new Date(); em7dias.setDate(em7dias.getDate() + 7); const str7 = em7dias.toISOString().split("T")[0];
+  const em30dias = new Date(); em30dias.setDate(em30dias.getDate() + 30); const str30 = em30dias.toISOString().split("T")[0];
+  const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
+
+  const contratosAtrasados = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim < hoje);
+  const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7);
+  const cnhVencida = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh < hoje);
+  const cnhVencendo = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh >= hoje && c.vencimento_cnh <= str30);
+  const multasPend = multas.filter(m => m.status === "pendente");
+  const contasVencidas = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento < hoje);
+  const contasVencendo = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento >= hoje && c.vencimento <= str3);
+  const manutProlongadas = manutencoes.filter(m => m.status === "em_andamento" && m.data_saida && m.data_saida < hoje);
+
+  const totalAlertas = contratosAtrasados.length + cnhVencida.length + contasVencidas.length + manutProlongadas.length;
+
+  function AlertBox({ cor, icon, titulo, items, sub }) {
+    if (!items || items.length === 0) return null;
+    return <div style={{ background: cor + "12", border: "1.5px solid " + cor, borderRadius: 14, padding: "12px 16px" }}>
+      <div style={{ fontWeight: 700, color: cor, fontSize: 14, marginBottom: items.length > 1 ? 8 : 0 }}>{icon} {titulo}</div>
+      {items.map((it, i) => <div key={i} style={{ fontSize: 13, color: "#333", paddingTop: 4, borderTop: i > 0 ? "1px solid " + cor + "30" : "none", marginTop: i > 0 ? 4 : 0 }}>{it}</div>)}
+      {sub && <div style={{ fontSize: 12, color: cor, marginTop: 6, fontWeight: 600 }}>{sub}</div>}
+    </div>;
+  }
+
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-    <div><div style={{ fontSize: 24, fontWeight: 800 }}>AutoGest Pro</div><div style={{ fontSize: 14, color: C.sub }}>Painel de Gestao</div></div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <div><div style={{ fontSize: 24, fontWeight: 800 }}>AutoGest Pro</div><div style={{ fontSize: 14, color: C.sub }}>Painel de Gestao</div></div>
+      {totalAlertas > 0 && <div style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 13, fontWeight: 800 }}>{totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}</div>}
+    </div>
+
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
       <Stat icon="🚗" label="Disponiveis" val={disp} color={C.green} />
       <Stat icon="📋" label="Ativos" val={ativos} color={C.blue} />
@@ -216,21 +245,50 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas }
       <Stat icon="🔧" label="Manutencao" val={manAt} color={C.purple} />
     </div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 150 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Receita Total</div><div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{fmtBRL(receita)}</div></div>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 150 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Despesas</div><div style={{ fontSize: 22, fontWeight: 800, color: C.red }}>{fmtBRL(totalDesp)}</div></div>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 150 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Lucro</div><div style={{ fontSize: 22, fontWeight: 800, color: lucro >= 0 ? C.green : C.red }}>{fmtBRL(lucro)}</div></div>
+      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Receita Total</div><div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{fmtBRL(totalReceita)}</div></div>
+      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Despesas</div><div style={{ fontSize: 20, fontWeight: 800, color: C.red }}>{fmtBRL(totalDesp)}</div></div>
+      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Lucro</div><div style={{ fontSize: 20, fontWeight: 800, color: lucro >= 0 ? C.green : C.red }}>{fmtBRL(lucro)}</div></div>
     </div>
-    {mPend > 0 && <div style={{ background: C.orange + "18", border: "1px solid " + C.orange, borderRadius: 12, padding: "12px 16px", color: C.orange, fontWeight: 600, fontSize: 14 }}>⚠️ {mPend} multa(s) pendente(s)</div>}
-    {cnhAlerta.length > 0 && <div style={{ background: C.red + "18", border: "1px solid " + C.red, borderRadius: 12, padding: "12px 16px", color: C.red, fontWeight: 600, fontSize: 14 }}>🪪 CNH vencida: {cnhAlerta.map(c => c.nome).join(", ")}</div>}
+
+    {(contratosAtrasados.length > 0 || contratosVencendo.length > 0 || cnhVencida.length > 0 || cnhVencendo.length > 0 || multasPend.length > 0 || contasVencidas.length > 0 || contasVencendo.length > 0 || manutProlongadas.length > 0) && (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Central de Alertas</div>
+        <AlertBox cor={C.red} icon="🚨" titulo={"Contratos ATRASADOS (" + contratosAtrasados.length + ")"}
+          items={contratosAtrasados.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · venceu em " + c.data_fim; })}
+          sub={"Total em atraso: " + fmtBRL(contratosAtrasados.reduce((s,c)=>s+parseFloat(c.valor_total||0),0))} />
+        <AlertBox cor={C.orange} icon="⏰" titulo={"Contratos vencendo em 7 dias (" + contratosVencendo.length + ")"}
+          items={contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · ate " + c.data_fim; })} />
+        <AlertBox cor={C.red} icon="🪪" titulo={"CNH Vencida (" + cnhVencida.length + ")"}
+          items={cnhVencida.map(c => c.nome + " · venceu em " + c.vencimento_cnh)} />
+        <AlertBox cor={C.orange} icon="🪪" titulo={"CNH vencendo em 30 dias (" + cnhVencendo.length + ")"}
+          items={cnhVencendo.map(c => c.nome + " · vence em " + c.vencimento_cnh)} />
+        <AlertBox cor={C.red} icon="💸" titulo={"Contas VENCIDAS (" + contasVencidas.length + ")"}
+          items={contasVencidas.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · venceu em " + c.vencimento)}
+          sub={"Total vencido: " + fmtBRL(contasVencidas.reduce((s,c)=>s+parseFloat(c.valor||0),0))} />
+        <AlertBox cor={C.orange} icon="💰" titulo={"Contas vencendo em 3 dias (" + contasVencendo.length + ")"}
+          items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · vence em " + c.vencimento)} />
+        <AlertBox cor={C.orange} icon="⚠️" titulo={"Multas pendentes (" + multasPend.length + ")"}
+          items={[fmtBRL(multasPend.reduce((s,m)=>s+parseFloat(m.valor||0),0)) + " em multas aguardando pagamento"]} />
+        <AlertBox cor={C.purple} icon="🔧" titulo={"Manutencoes com prazo vencido (" + manutProlongadas.length + ")"}
+          items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " - " + m.tipo + " · prevista para " + m.data_saida; })} />
+      </div>
+    )}
+
     <div style={CARD}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 10 }}>Contratos Recentes</div>
-      {contratos.slice(0, 5).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato ainda</div>}
-      {contratos.slice(0, 5).map((c, i) => (
-        <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < 4 ? "1px solid " + C.border : "none" }}>
-          <div><div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)}</div><div style={{ fontSize: 12, color: C.sub }}>{c.data_inicio} a {c.data_fim}</div></div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</span><span style={Badge(c.status === "ativo" ? C.blue : c.status === "concluido" ? C.green : C.red)}>{c.status}</span></div>
-        </div>
-      ))}
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 10 }}>Contratos Ativos Recentes</div>
+      {contratos.filter(c => c.status === "ativo").slice(0, 5).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato ativo</div>}
+      {contratos.filter(c => c.status === "ativo").slice(0, 5).map((c, i, arr) => {
+        var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
+        var atrasado = c.data_fim && c.data_fim < hoje;
+        return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)} {atrasado && <span style={{ color: C.red, fontSize: 11 }}>● ATRASADO</span>}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
+            <div style={{ fontSize: 12, color: atrasado ? C.red : C.sub }}>{c.data_inicio} ate {c.data_fim}</div>
+          </div>
+          <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div><span style={Badge(atrasado ? C.red : C.blue)}>{atrasado ? "atrasado" : "ativo"}</span></div>
+        </div>;
+      })}
     </div>
   </div>;
 }
@@ -743,7 +801,11 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma manutencao</div>}
       {fil.map((m, i) => { var ve = getVe(m.veiculo_id); return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div><div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div><div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div><div style={{ fontSize: 12, color: C.sub }}>Entrada: {m.data_entrada || "--"}{m.data_saida && " - Saida: " + m.data_saida}</div>{m.oficina && <div style={{ fontSize: 12, color: C.sub }}>{m.oficina}</div>}</div>
+          <div><div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div><div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div><div style={{ fontSize: 12, color: C.sub }}>Entrada: {m.data_entrada || "--"}{m.data_saida && " - Saida: " + m.data_saida}</div>{m.oficina && <div style={{ fontSize: 12, color: C.sub }}>{m.oficina}</div>}
+          <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
+            {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orcamento</a>}
+            {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota de Servico</a>}
+          </div></div>
           <div style={{ textAlign: "right" }}>{parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 16, color: C.purple }}>{fmtBRL(m.custo)}</div>}<span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span></div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
@@ -769,6 +831,8 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
           <Lbl label="Custo (R$)" flex={1}><input style={FI} type="number" step="0.01" value={form.custo || ""} onChange={e => F("custo", e.target.value)} /></Lbl>
         </div>
         <Lbl label="Descricao / Pecas"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 80 })} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
+        <UploadField label="Orcamento (PDF/Foto)" value={form.orcamento_url || ""} onChange={v => F("orcamento_url", v)} pasta="manutencao" nome={"orc_" + (form.veiculo_id || "0") + "_" + Date.now()} />
+        <UploadField label="Nota de Servico (PDF/Foto)" value={form.nota_servico_url || ""} onChange={v => F("nota_servico_url", v)} pasta="manutencao" nome={"nota_" + (form.veiculo_id || "0") + "_" + Date.now()} />
         <button style={Btn(C.purple)} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
       </div>
     </Modal>
@@ -776,15 +840,19 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
 }
 
 // ── FINANCEIRO ─────────────────────────────────────────────────────────────
-function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toast }) {
+function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setContas, contratos, manutencoes, multas, toast }) {
   const [modal, setModal] = useState(false);
+  const [modalTipo, setModalTipo] = useState("despesa");
   const [form, setForm] = useState({});
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("resumo");
   const [filtroMes, setFiltroMes] = useState(new Date().toISOString().slice(0, 7));
   function F(k, v) { setForm(p => Object.assign({}, p, { [k]: v })); }
-  async function save() {
+
+  const hoje = new Date().toISOString().split("T")[0];
+
+  async function saveDespesa() {
     if (!form.descricao || !form.valor || !form.data) return toast("Descricao, valor e data obrigatorios", "error");
     setLoading(true);
     try {
@@ -794,49 +862,124 @@ function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toa
     } catch(e) { toast("Erro: " + e.message, "error"); }
     setLoading(false);
   }
-  async function remove(id) { if (!confirm("Excluir?")) return; await db.del("despesas", id); setDespesas(p => p.filter(d => d.id !== id)); toast("Excluido!"); }
+  async function saveReceita() {
+    if (!form.descricao || !form.valor || !form.data) return toast("Descricao, valor e data obrigatorios", "error");
+    setLoading(true);
+    try {
+      if (edit) { const u = await db.patch("receitas", edit, form); setReceitas(p => p.map(r => r.id === edit ? Object.assign({}, r, u) : r)); toast("Atualizado!"); }
+      else { const c = await db.post("receitas", form); setReceitas(p => [c].concat(p)); toast("Registrado!"); }
+      setModal(false);
+    } catch(e) { toast("Erro: " + e.message, "error"); }
+    setLoading(false);
+  }
+  async function saveConta() {
+    if (!form.descricao || !form.valor || !form.vencimento) return toast("Descricao, valor e vencimento obrigatorios", "error");
+    setLoading(true);
+    try {
+      if (edit) { const u = await db.patch("contas", edit, form); setContas(p => p.map(c => c.id === edit ? Object.assign({}, c, u) : c)); toast("Atualizado!"); }
+      else { const c = await db.post("contas", form); setContas(p => [c].concat(p)); toast("Registrado!"); }
+      setModal(false);
+    } catch(e) { toast("Erro: " + e.message, "error"); }
+    setLoading(false);
+  }
+  async function removeDespesa(id) { if (!confirm("Excluir?")) return; await db.del("despesas", id); setDespesas(p => p.filter(d => d.id !== id)); toast("Excluido!"); }
+  async function removeReceita(id) { if (!confirm("Excluir?")) return; await db.del("receitas", id); setReceitas(p => p.filter(r => r.id !== id)); toast("Excluido!"); }
+  async function removeConta(id) { if (!confirm("Excluir?")) return; await db.del("contas", id); setContas(p => p.filter(c => c.id !== id)); toast("Excluido!"); }
+  async function pagarConta(c) { await db.patch("contas", c.id, { status: "pago" }); setContas(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status: "pago" }) : x)); toast("Conta paga!"); }
 
-  var totalReceita = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  var receitaContratos = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  var receitaManual = receitas.reduce((s, r) => s + parseFloat(r.valor || 0), 0);
+  var totalReceita = receitaContratos + receitaManual;
   var totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
   var totalMan = manutencoes.reduce((s, m) => s + parseFloat(m.custo || 0), 0);
-  var totalMultas = multas.filter(m => m.status === "pago").reduce((s, m) => s + parseFloat(m.valor || 0), 0);
+  var totalMultasPagas = multas.filter(m => m.status === "pago").reduce((s, m) => s + parseFloat(m.valor || 0), 0);
   var lucro = totalReceita - totalDesp - totalMan;
-
-  var desByMes = {};
-  despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); });
-  var recByMes = {};
-  contratos.filter(c => c.status === "concluido").forEach(function(c) { var mes = (c.data_fim || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(c.valor_total || 0); });
-  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)))).sort().reverse().slice(0, 12);
+  var contasPagar = contas.filter(c => c.tipo === "pagar" || !c.tipo);
+  var contasPendentes = contasPagar.filter(c => c.status === "pendente");
+  var contasVencidas = contasPendentes.filter(c => c.vencimento && c.vencimento < hoje);
+  var totalPagar = contasPendentes.reduce((s, c) => s + parseFloat(c.valor || 0), 0);
 
   var despFiltradas = despesas.filter(d => (d.data || "").slice(0, 7) === filtroMes);
-  var catTotais = {};
-  despFiltradas.forEach(function(d) { var cat = d.categoria || "Outros"; if (!catTotais[cat]) catTotais[cat] = 0; catTotais[cat] += parseFloat(d.valor || 0); });
+  var recFiltradas = receitas.filter(r => (r.data || "").slice(0, 7) === filtroMes);
 
-  var CATS = ["Combustivel", "Limpeza", "Impostos", "Salarios", "Aluguel", "Manutencao", "Marketing", "Outros"];
+  var desByMes = {}; despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); });
+  var recByMes = {}; contratos.filter(c => c.status === "concluido").forEach(function(c) { var mes = (c.data_fim || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(c.valor_total || 0); });
+  receitas.forEach(function(r) { var mes = (r.data || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(r.valor || 0); });
+  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)))).sort().reverse().slice(0, 12);
+
+  var CATS_DESP = ["Combustivel", "Limpeza", "Impostos", "Salarios", "Aluguel", "Manutencao", "Marketing", "Seguros", "Outros"];
+  var CATS_REC = ["Locacao", "Servico", "Multa Cobrada", "Deposito", "Outros"];
+  var CATS_CONTA = ["Fornecedor", "Imposto", "Aluguel", "Salario", "Seguro", "Servico", "Outros"];
+
+  function openDesp(d) { setForm(d ? Object.assign({}, d) : { data: new Date().toISOString().split("T")[0], categoria: "Outros" }); setEdit(d ? d.id : null); setModalTipo("despesa"); setModal(true); }
+  function openRec(r) { setForm(r ? Object.assign({}, r) : { data: new Date().toISOString().split("T")[0], categoria: "Locacao", forma_pagamento: "Pix" }); setEdit(r ? r.id : null); setModalTipo("receita"); setModal(true); }
+  function openConta(c) { setForm(c ? Object.assign({}, c) : { vencimento: "", tipo: "pagar", status: "pendente", categoria: "Fornecedor" }); setEdit(c ? c.id : null); setModalTipo("conta"); setModal(true); }
+
+  var SC_CONTA = { pendente: C.orange, pago: C.green, vencido: C.red, cancelado: C.gray };
+
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     <div style={{ fontSize: 24, fontWeight: 800 }}>Financeiro</div>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {["resumo", "despesas", "fluxo"].map(x => <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{x}</button>)}
+      {[["resumo","📊"],["receitas","💰"],["despesas","📉"],["contas","📅"],["fluxo","📈"]].map(([x, ic]) =>
+        <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{ic} {x}</button>
+      )}
     </div>
 
     {tab === "resumo" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <Stat icon="💰" label="Receita Total" val={fmtBRL(totalReceita)} color={C.green} />
-        <Stat icon="📉" label="Despesas" val={fmtBRL(totalDesp)} color={C.red} />
-        <Stat icon="🔧" label="Manutencoes" val={fmtBRL(totalMan)} color={C.purple} />
+        <Stat icon="🚗" label="De Contratos" val={fmtBRL(receitaContratos)} color={C.teal} />
+        <Stat icon="➕" label="Outras Receitas" val={fmtBRL(receitaManual)} color={C.blue} />
       </div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Stat icon="📉" label="Despesas" val={fmtBRL(totalDesp)} color={C.red} />
+        <Stat icon="🔧" label="Manutencoes" val={fmtBRL(totalMan)} color={C.purple} />
         <Stat icon="⚖️" label="Lucro Liquido" val={fmtBRL(lucro)} color={lucro >= 0 ? C.green : C.red} />
-        <Stat icon="✅" label="Multas Recebidas" val={fmtBRL(totalMultas)} color={C.orange} />
-        <Stat icon="📋" label="Contratos Concluidos" val={contratos.filter(c => c.status === "concluido").length} color={C.blue} />
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Stat icon="📅" label="Contas a Pagar" val={fmtBRL(totalPagar)} color={C.orange} />
+        <Stat icon="🚨" label="Contas Vencidas" val={contasVencidas.length} color={C.red} />
+        <Stat icon="✅" label="Multas Recebidas" val={fmtBRL(totalMultasPagas)} color={C.orange} />
       </div>
       <div style={CARD}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Despesas por Categoria (este mes)</div>
-        {Object.keys(catTotais).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 16 }}>Nenhuma despesa este mes</div>}
-        {Object.entries(catTotais).map(([cat, val]) => (
-          <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid " + C.border }}>
-            <span style={{ fontWeight: 600 }}>{cat}</span>
-            <span style={{ fontWeight: 700, color: C.red }}>{fmtBRL(val)}</span>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>DRE Simplificado</div>
+        {[
+          { label: "Receita de Locacoes", val: receitaContratos, color: C.green },
+          { label: "Outras Receitas", val: receitaManual, color: C.green },
+          { label: "(-) Despesas Operacionais", val: -totalDesp, color: C.red },
+          { label: "(-) Custo de Manutencao", val: -totalMan, color: C.red },
+          { label: "= Resultado Liquido", val: lucro, color: lucro >= 0 ? C.green : C.red, bold: true },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: i < 4 ? "1px solid " + C.border : "none" }}>
+            <span style={{ fontWeight: row.bold ? 800 : 500, fontSize: row.bold ? 15 : 14 }}>{row.label}</span>
+            <span style={{ fontWeight: 800, color: row.color, fontSize: row.bold ? 16 : 14 }}>{fmtBRL(Math.abs(row.val))}</span>
+          </div>
+        ))}
+      </div>
+    </div>}
+
+    {tab === "receitas" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
+          <span style={{ fontWeight: 700, color: C.green }}>{fmtBRL(recFiltradas.reduce((s,r)=>s+parseFloat(r.valor||0),0))}</span>
+        </div>
+        <button style={Btn(C.green)} onClick={() => openRec(null)}>+ Receita</button>
+      </div>
+      <div style={CARD}>
+        {recFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma receita manual neste periodo</div>}
+        {recFiltradas.map((r, i) => (
+          <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < recFiltradas.length - 1 ? "1px solid " + C.border : "none", flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>{r.descricao}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>{r.categoria}{r.forma_pagamento && " · " + r.forma_pagamento} · {r.data}</div>
+              {r.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{r.observacoes}</div>}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontWeight: 800, color: C.green }}>{fmtBRL(r.valor)}</span>
+              <button style={Ghost()} onClick={() => openRec(r)}>Editar</button>
+              <button style={Btn(C.red, true)} onClick={() => removeReceita(r.id)}>✕</button>
+            </div>
           </div>
         ))}
       </div>
@@ -846,9 +989,9 @@ function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toa
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
-          <span style={{ fontWeight: 700, color: C.red }}>{fmtBRL(despFiltradas.reduce((s, d) => s + parseFloat(d.valor || 0), 0))}</span>
+          <span style={{ fontWeight: 700, color: C.red }}>{fmtBRL(despFiltradas.reduce((s,d)=>s+parseFloat(d.valor||0),0))}</span>
         </div>
-        <button style={Btn(C.red)} onClick={() => { setForm({ data: new Date().toISOString().split("T")[0], categoria: "Outros" }); setEdit(null); setModal(true); }}>+ Despesa</button>
+        <button style={Btn(C.red)} onClick={() => openDesp(null)}>+ Despesa</button>
       </div>
       <div style={CARD}>
         {despFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma despesa neste periodo</div>}
@@ -856,16 +999,55 @@ function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toa
           <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < despFiltradas.length - 1 ? "1px solid " + C.border : "none", flexWrap: "wrap", gap: 8 }}>
             <div>
               <div style={{ fontWeight: 600 }}>{d.descricao}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{d.categoria} - {d.data}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>{d.categoria} · {d.data}</div>
               {d.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{d.observacoes}</div>}
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontWeight: 800, color: C.red }}>{fmtBRL(d.valor)}</span>
-              <button style={Ghost()} onClick={() => { setForm(Object.assign({}, d)); setEdit(d.id); setModal(true); }}>Editar</button>
-              <button style={Btn(C.red, true)} onClick={() => remove(d.id)}>✕</button>
+              <button style={Ghost()} onClick={() => openDesp(d)}>Editar</button>
+              <button style={Btn(C.red, true)} onClick={() => removeDespesa(d.id)}>✕</button>
             </div>
           </div>
         ))}
+      </div>
+    </div>}
+
+    {tab === "contas" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <span style={{ fontWeight: 700, color: C.orange }}>{fmtBRL(totalPagar)} pendentes</span>
+          {contasVencidas.length > 0 && <span style={{ marginLeft: 12, fontWeight: 700, color: C.red }}>{contasVencidas.length} vencida(s)</span>}
+        </div>
+        <button style={Btn(C.orange)} onClick={() => openConta(null)}>+ Conta</button>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {["todos","pendente","pago"].map(x => (
+          <button key={x} onClick={() => setFiltroMes(x === filtroMes ? "" : x)} style={Object.assign({}, Ghost(filtroMes === x ? C.blue : C.gray), { background: filtroMes === x ? C.blue : "transparent", color: filtroMes === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{x}</button>
+        ))}
+      </div>
+      <div style={CARD}>
+        {contas.filter(c => filtroMes === "pendente" || filtroMes === "pago" ? c.status === filtroMes : true).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma conta</div>}
+        {contas.filter(c => filtroMes === "pendente" || filtroMes === "pago" ? c.status === filtroMes : true).map((c, i, arr) => {
+          var vencida = c.status === "pendente" && c.vencimento && c.vencimento < hoje;
+          return <div key={c.id} style={{ padding: "11px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{c.descricao} {vencida && <span style={{ color: C.red, fontSize: 11, fontWeight: 800 }}>VENCIDA</span>}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>{c.categoria} · Venc: <span style={{ color: vencida ? C.red : C.sub, fontWeight: vencida ? 700 : 400 }}>{c.vencimento || "--"}</span></div>
+                {c.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{c.observacoes}</div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: vencida ? C.red : C.orange }}>{fmtBRL(c.valor)}</div>
+                <span style={Badge(SC_CONTA[vencida ? "vencido" : c.status] || C.gray)}>{vencida ? "vencida" : c.status}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              {c.status === "pendente" && <button style={Btn(C.green, true)} onClick={() => pagarConta(c)}>Marcar Pago</button>}
+              <button style={Ghost()} onClick={() => openConta(c)}>Editar</button>
+              <button style={Btn(C.red, true)} onClick={() => removeConta(c.id)}>✕</button>
+            </div>
+          </div>;
+        })}
       </div>
     </div>}
 
@@ -874,7 +1056,12 @@ function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toa
       {meses.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Sem dados</div>}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ background: C.bg }}><th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: C.sub }}>Mes</th><th style={{ padding: "8px 12px", textAlign: "right", color: C.green }}>Receitas</th><th style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>Despesas</th><th style={{ padding: "8px 12px", textAlign: "right", color: C.blue }}>Saldo</th></tr></thead>
+          <thead><tr style={{ background: C.bg }}>
+            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: C.sub }}>Mes</th>
+            <th style={{ padding: "8px 12px", textAlign: "right", color: C.green }}>Receitas</th>
+            <th style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>Despesas</th>
+            <th style={{ padding: "8px 12px", textAlign: "right", color: C.blue }}>Saldo</th>
+          </tr></thead>
           <tbody>{meses.map(mes => {
             var rec = recByMes[mes] || 0; var desp = desByMes[mes] || 0; var saldo = rec - desp;
             return <tr key={mes} style={{ borderTop: "1px solid " + C.border }}>
@@ -888,16 +1075,44 @@ function Financeiro({ despesas, setDespesas, contratos, manutencoes, multas, toa
       </div>
     </div>}
 
-    <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar Despesa" : "Nova Despesa"}>
+    <Modal open={modal} onClose={() => setModal(false)} title={modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : modalTipo === "receita" ? (edit ? "Editar Receita" : "Nova Receita") : (edit ? "Editar Conta" : "Nova Conta")}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
-        <div style={{ display: "flex", gap: 10 }}>
-          <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
-          <Lbl label="Data *" flex={1}><input style={FI} type="date" value={form.data || ""} onChange={e => F("data", e.target.value)} /></Lbl>
-        </div>
-        <Lbl label="Categoria"><select style={FI} value={form.categoria || "Outros"} onChange={e => F("categoria", e.target.value)}>{CATS.map(c => <option key={c}>{c}</option>)}</select></Lbl>
-        <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
-        <button style={Btn(C.red)} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
+        {modalTipo === "despesa" && <>
+          <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
+            <Lbl label="Data *" flex={1}><input style={FI} type="date" value={form.data || ""} onChange={e => F("data", e.target.value)} /></Lbl>
+          </div>
+          <Lbl label="Categoria"><select style={FI} value={form.categoria || "Outros"} onChange={e => F("categoria", e.target.value)}>{CATS_DESP.map(c => <option key={c}>{c}</option>)}</select></Lbl>
+          <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
+          <button style={Btn(C.red)} onClick={saveDespesa} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
+        </>}
+        {modalTipo === "receita" && <>
+          <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} placeholder="Ex: Locacao avulsa, Servico de higienizacao..." /></Lbl>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
+            <Lbl label="Data *" flex={1}><input style={FI} type="date" value={form.data || ""} onChange={e => F("data", e.target.value)} /></Lbl>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Locacao"} onChange={e => F("categoria", e.target.value)}>{CATS_REC.map(c => <option key={c}>{c}</option>)}</select></Lbl>
+            <Lbl label="Forma de Pagamento" flex={1}><select style={FI} value={form.forma_pagamento || "Pix"} onChange={e => F("forma_pagamento", e.target.value)}><option>Pix</option><option>Dinheiro</option><option>Cartao Debito</option><option>Cartao Credito</option><option>Transferencia</option><option>Boleto</option></select></Lbl>
+          </div>
+          <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
+          <button style={Btn(C.green)} onClick={saveReceita} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
+        </>}
+        {modalTipo === "conta" && <>
+          <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} placeholder="Ex: Aluguel do galpao, Seguro frota..." /></Lbl>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
+            <Lbl label="Vencimento *" flex={1}><input style={FI} type="date" value={form.vencimento || ""} onChange={e => F("vencimento", e.target.value)} /></Lbl>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Fornecedor"} onChange={e => F("categoria", e.target.value)}>{CATS_CONTA.map(c => <option key={c}>{c}</option>)}</select></Lbl>
+            <Lbl label="Status" flex={1}><select style={FI} value={form.status || "pendente"} onChange={e => F("status", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="cancelado">Cancelado</option></select></Lbl>
+          </div>
+          <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
+          <button style={Btn(C.orange)} onClick={saveConta} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
+        </>}
       </div>
     </Modal>
   </div>;
@@ -1077,7 +1292,15 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table contratos add column if not exists km_franquia numeric;<br/>
         alter table contratos add column if not exists valor_km_excedente numeric;<br/>
         alter table contratos add column if not exists checklist_retirada text;<br/>
-        alter table contratos add column if not exists checklist_devolucao text;
+        alter table contratos add column if not exists checklist_devolucao text;<br/>
+        alter table manutencao add column if not exists orcamento_url text;<br/>
+        alter table manutencao add column if not exists nota_servico_url text;<br/>
+        create table if not exists receitas (id bigserial primary key, descricao text, categoria text, valor numeric, data date, forma_pagamento text, observacoes text);<br/>
+        alter table receitas disable row level security;<br/>
+        grant all on receitas to anon;<br/>
+        create table if not exists contas (id bigserial primary key, descricao text, categoria text, valor numeric, vencimento date, status text default 'pendente', tipo text default 'pagar', observacoes text);<br/>
+        alter table contas disable row level security;<br/>
+        grant all on contas to anon;
       </div>
     </div>
   </div>;
@@ -1099,6 +1322,8 @@ function App() {
   const [multas, setMultas] = useState([]);
   const [manutencoes, setManutencoes] = useState([]);
   const [despesas, setDespesas] = useState([]);
+  const [receitas, setReceitas] = useState([]);
+  const [contas, setContas] = useState([]);
   const [empresa, setEmpresa] = useState({});
   const [toastState, setToastState] = useState({ msg: "", type: "ok" });
   const mobile = useMobile();
@@ -1112,10 +1337,12 @@ function App() {
     db.get("multas").then(d => setMultas(d || []));
     db.get("manutencao").then(d => setManutencoes(d || []));
     db.get("despesas").then(d => setDespesas(d || []));
+    db.get("receitas").then(d => setReceitas(d || []));
+    db.get("contas").then(d => setContas(d || []));
     db.get("config", "limit=1").then(d => { if (d && d[0]) setEmpresa(d[0]); });
   }, []);
 
-  var props = { veiculos, setVeiculos, clientes, setClientes, contratos, setContratos, multas, setMultas, manutencoes, setManutencoes, despesas, setDespesas, empresa, toast };
+  var props = { veiculos, setVeiculos, clientes, setClientes, contratos, setContratos, multas, setMultas, manutencoes, setManutencoes, despesas, setDespesas, receitas, setReceitas, contas, setContas, empresa, toast };
 
   function page() {
     if (tab === "inicio") return <Inicio {...props} />;
