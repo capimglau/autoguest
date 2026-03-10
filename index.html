@@ -551,8 +551,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       valor_total: ct.valor_total, status: "ativo",
       status_pagamento: "pendente",
       forma_pagamento: ct.forma_pagamento,
-      previsao_pagamento: novaPrevPag,
-      observacoes: "Renovacao do contrato #" + numCt(ct.id)
+      previsao_pagamento: novaPrevPag
     };
     try {
       const novo = await db.post("contratos", payload);
