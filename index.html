@@ -58,6 +58,7 @@ function Ghost(c) { return { background: "transparent", color: c || C.blue, bord
 function Badge(c) { return { background: c + "22", color: c, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, display: "inline-block", whiteSpace: "nowrap" }; }
 function numCt(id) { return String(id).padStart(5, "0"); }
 function fmtBRL(v) { return "R$ " + parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 }); }
+function fmtDate(d) { if (!d) return "--"; var p = d.split("-"); if (p.length !== 3) return d; return p[2] + "/" + p[1] + "/" + p[0].slice(2); }
 
 function useMobile() {
   const [m, setM] = useState(window.innerWidth < 768);
@@ -284,7 +285,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)} {atrasado && <span style={{ color: C.red, fontSize: 11 }}>● ATRASADO</span>}</div>
             <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
-            <div style={{ fontSize: 12, color: atrasado ? C.red : C.sub }}>{c.data_inicio} ate {c.data_fim}</div>
+            <div style={{ fontSize: 12, color: atrasado ? C.red : C.sub }}>{fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
           </div>
           <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div><span style={Badge(atrasado ? C.red : C.blue)}>{atrasado ? "atrasado" : "ativo"}</span></div>
         </div>;
@@ -458,7 +459,7 @@ function Clientes({ clientes, setClientes, contratos, toast }) {
         {histContratos.map((c, i) => (
           <div key={c.id} style={{ padding: "10px 0", borderBottom: i < histContratos.length - 1 ? "1px solid " + C.border : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div><div style={{ fontWeight: 600 }}>Contrato No {numCt(c.id)}</div><div style={{ fontSize: 12, color: C.sub }}>{c.data_inicio} a {c.data_fim}</div></div>
+              <div><div style={{ fontWeight: 600 }}>Contrato No {numCt(c.id)}</div><div style={{ fontSize: 12, color: C.sub }}>{fmtDate(c.data_inicio)} a {fmtDate(c.data_fim)}</div></div>
               <div><div style={{ fontWeight: 700, color: C.green }}>{fmtBRL(c.valor_total)}</div><span style={Badge(c.status === "ativo" ? C.blue : c.status === "concluido" ? C.green : C.red)}>{c.status}</span></div>
             </div>
           </div>
@@ -570,14 +571,23 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
       {fil.map((c, i) => {
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
+        var pagAtrasado = c.status === "ativo" && c.previsao_pagamento && c.previsao_pagamento < hoje;
         return <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>Contrato No {numCt(c.id)}</div>
               <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} - {ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{c.data_inicio} a {c.data_fim}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>📅 {fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
+              {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal }}>💳 {c.forma_pagamento}</div>}
+              {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 400 }}>
+                {pagAtrasado ? "🚨 Pagamento ATRASADO desde " : "📆 Pagar ate: "}{fmtDate(c.previsao_pagamento)}
+              </div>}
             </div>
-            <div style={{ textAlign: "right" }}><div style={{ fontWeight: 800, fontSize: 16, color: C.green }}>{fmtBRL(c.valor_total)}</div><span style={Badge(SC[c.status] || C.gray)}>{c.status}</span></div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: C.green }}>{fmtBRL(c.valor_total)}</div>
+              <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
+              {pagAtrasado && <div><span style={Badge(C.red)}>pag. atrasado</span></div>}
+            </div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {c.status === "ativo" && <button style={Btn(C.green, true)} onClick={() => concluir(c)}>Concluir</button>}
@@ -625,6 +635,10 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
           <Lbl label="R$/KM excedente" flex={1}><input style={FI} type="number" step="0.01" value={form.valor_km_excedente || ""} onChange={e => F("valor_km_excedente", e.target.value)} placeholder="Ex: 1.50" /></Lbl>
         </div>
         <Lbl label="Status"><select style={FI} value={form.status || "ativo"} onChange={e => F("status", e.target.value)}><option value="ativo">Ativo</option><option value="concluido">Concluido</option><option value="cancelado">Cancelado</option></select></Lbl>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Lbl label="Forma de Pagamento" flex={1}><select style={FI} value={form.forma_pagamento || ""} onChange={e => F("forma_pagamento", e.target.value)}><option value="">Selecione...</option><option>Pix</option><option>Dinheiro</option><option>Cartao Debito</option><option>Cartao Credito</option><option>Transferencia</option><option>Boleto</option><option>A Prazo</option></select></Lbl>
+          <Lbl label="Previsao de Pagamento" flex={1}><input style={FI} type="date" value={form.previsao_pagamento || ""} onChange={e => F("previsao_pagamento", e.target.value)} /></Lbl>
+        </div>
         <Lbl label="Checklist Vistoria Retirada"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_retirada || ""} onChange={e => F("checklist_retirada", e.target.value)} placeholder="Ex: Sem arranhoes, tanque cheio, pneus ok..." /></Lbl>
         <Lbl label="Checklist Vistoria Devolucao"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_devolucao || ""} onChange={e => F("checklist_devolucao", e.target.value)} placeholder="Ex: Arranhao no para-choque traseiro..." /></Lbl>
         <Lbl label="Observacoes"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 50 })} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
@@ -718,7 +732,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
               <div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div>
               <div style={{ fontSize: 13, color: C.sub }}>👤 {cl && cl.nome || "--"}</div>
               <div style={{ fontSize: 13, color: C.sub }}>🚗 {ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>Contrato #{m.contrato_id} · {m.data}{m.local && " · " + m.local}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>Contrato #{m.contrato_id} · {fmtDate(m.data)}{m.local && " · " + m.local}</div>
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                 {m.auto_infracao_url && <a href={m.auto_infracao_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Auto Infracao</a>}
                 {m.cnh_condutor_url && <a href={m.cnh_condutor_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>CNH Condutor</a>}
@@ -801,7 +815,7 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma manutencao</div>}
       {fil.map((m, i) => { var ve = getVe(m.veiculo_id); return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div><div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div><div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div><div style={{ fontSize: 12, color: C.sub }}>Entrada: {m.data_entrada || "--"}{m.data_saida && " - Saida: " + m.data_saida}</div>{m.oficina && <div style={{ fontSize: 12, color: C.sub }}>{m.oficina}</div>}
+          <div><div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div><div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div><div style={{ fontSize: 12, color: C.sub }}>Entrada: {fmtDate(m.data_entrada)}{m.data_saida && " - Saida: " + fmtDate(m.data_saida)}</div>{m.oficina && <div style={{ fontSize: 12, color: C.sub }}>{m.oficina}</div>}
           <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
             {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orcamento</a>}
             {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota de Servico</a>}
@@ -1295,6 +1309,8 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table contratos add column if not exists checklist_devolucao text;<br/>
         alter table manutencao add column if not exists orcamento_url text;<br/>
         alter table manutencao add column if not exists nota_servico_url text;<br/>
+        alter table contratos add column if not exists forma_pagamento text;<br/>
+        alter table contratos add column if not exists previsao_pagamento date;<br/>
         create table if not exists receitas (id bigserial primary key, descricao text, categoria text, valor numeric, data date, forma_pagamento text, observacoes text);<br/>
         alter table receitas disable row level security;<br/>
         grant all on receitas to anon;<br/>
