@@ -567,11 +567,12 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
   function filtrarContratos(lista) {
     return lista.filter(c => {
       if (filter === "todos") {}
-      else if (filter === "ativo" || filter === "concluido" || filter === "cancelado") { if (c.status !== filter) return false; }
+      else if (filter === "ativo" || filter === "concluido") { if (c.status !== filter) return false; }
       else if (filter === "mes_vigente") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
       else if (filter === "proximo_mes") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== proxMes) return false; }
-      else if (filter === "a_receber") { if (c.status_pagamento === "pago" || c.status_pagamento === "isento") return false; }
+      else if (filter === "a_receber") { if (c.status_pagamento === "pago" || c.status_pagamento === "isento") return false; if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
       else if (filter === "recebidos_mes") { if (c.status_pagamento !== "pago" || !c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
+      else if (filter === "mes_anterior") { var maDate = new Date(); maDate.setMonth(maDate.getMonth() - 1); var mesAnt = maDate.toISOString().slice(0,7); if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAnt) return false; }
       if (filDe && c.data_inicio && c.data_inicio < filDe) return false;
       if (filAte && c.data_fim && c.data_fim > filAte) return false;
       if (filVeiculo && String(c.veiculo_id) !== filVeiculo) return false;
@@ -608,9 +609,10 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       {[
         ["mes_vigente", "Mês Vigente", C.teal],
-        ["a_receber", "A Receber", C.orange],
+        ["a_receber", "A Receber/Mês", C.orange],
         ["recebidos_mes", "Recebidos/Mês", C.green],
         ["proximo_mes", "Próx. Mês", C.purple],
+        ["mes_anterior", "Mês Anterior", C.gray],
         ["ativo", "Todos Ativos", C.blue],
         ["concluido", "Concluidos", C.gray],
         ["todos", "Todos", C.gray],
