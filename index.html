@@ -213,7 +213,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const em30dias = new Date(); em30dias.setDate(em30dias.getDate() + 30); const str30 = em30dias.toISOString().split("T")[0];
   const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
 
-  const contratosAtrasados = contratos.filter(c => c.status === "ativo" && c.previsao_pagamento && c.previsao_pagamento < hoje);
+  const contratosAtrasados = contratos.filter(c => (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje);
   const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7);
   const cnhVencida = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh < hoje);
   const cnhVencendo = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh >= hoje && c.vencimento_cnh <= str30);
@@ -571,7 +571,8 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
       {fil.map((c, i) => {
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
-        var pagAtrasado = c.status === "ativo" && c.previsao_pagamento && c.previsao_pagamento < hoje;
+        var pagAtrasado = (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
+        var SPG = { pendente: C.orange, pago: C.green, parcial: C.blue, isento: C.gray };
         return <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <div>
@@ -580,17 +581,20 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               <div style={{ fontSize: 12, color: C.sub }}>📅 {fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
               {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal }}>💳 {c.forma_pagamento}</div>}
               {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 400 }}>
-                {pagAtrasado ? "🚨 Pagamento ATRASADO desde " : "📆 Pagar ate: "}{fmtDate(c.previsao_pagamento)}
+                {pagAtrasado ? "🚨 Pag. ATRASADO desde " : "📆 Pagar ate: "}{fmtDate(c.previsao_pagamento)}
               </div>}
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontWeight: 800, fontSize: 16, color: C.green }}>{fmtBRL(c.valor_total)}</div>
-              <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
-              {pagAtrasado && <div><span style={Badge(C.red)}>pag. atrasado</span></div>}
+              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", flexWrap: "wrap", marginTop: 4 }}>
+                <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
+                <span style={Badge(SPG[c.status_pagamento || "pendente"])}>{c.status_pagamento || "pendente"}</span>
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {c.status === "ativo" && <button style={Btn(C.green, true)} onClick={() => concluir(c)}>Concluir</button>}
+            {(c.status_pagamento === "pendente" || !c.status_pagamento) && <button style={Btn(C.teal, true)} onClick={async () => { await db.patch("contratos", c.id, { status_pagamento: "pago" }); setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x)); toast("Pagamento registrado!"); }}>💰 Pago</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
             <button style={Btn(C.blue, true)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
             <button style={Btn(C.orange, true)} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
@@ -637,8 +641,9 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         <Lbl label="Status"><select style={FI} value={form.status || "ativo"} onChange={e => F("status", e.target.value)}><option value="ativo">Ativo</option><option value="concluido">Concluido</option><option value="cancelado">Cancelado</option></select></Lbl>
         <div style={{ display: "flex", gap: 10 }}>
           <Lbl label="Forma de Pagamento" flex={1}><select style={FI} value={form.forma_pagamento || ""} onChange={e => F("forma_pagamento", e.target.value)}><option value="">Selecione...</option><option>Pix</option><option>Dinheiro</option><option>Cartao Debito</option><option>Cartao Credito</option><option>Transferencia</option><option>Boleto</option><option>A Prazo</option></select></Lbl>
-          <Lbl label="Previsao de Pagamento" flex={1}><input style={FI} type="date" value={form.previsao_pagamento || ""} onChange={e => F("previsao_pagamento", e.target.value)} /></Lbl>
+          <Lbl label="Status Pagamento" flex={1}><select style={FI} value={form.status_pagamento || "pendente"} onChange={e => F("status_pagamento", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="parcial">Parcial</option><option value="isento">Isento</option></select></Lbl>
         </div>
+        <Lbl label="Previsao de Pagamento"><input style={FI} type="date" value={form.previsao_pagamento || ""} onChange={e => F("previsao_pagamento", e.target.value)} /></Lbl>
         <Lbl label="Checklist Vistoria Retirada"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_retirada || ""} onChange={e => F("checklist_retirada", e.target.value)} placeholder="Ex: Sem arranhoes, tanque cheio, pneus ok..." /></Lbl>
         <Lbl label="Checklist Vistoria Devolucao"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_devolucao || ""} onChange={e => F("checklist_devolucao", e.target.value)} placeholder="Ex: Arranhao no para-choque traseiro..." /></Lbl>
         <Lbl label="Observacoes"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 50 })} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
@@ -1311,6 +1316,7 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table manutencao add column if not exists nota_servico_url text;<br/>
         alter table contratos add column if not exists forma_pagamento text;<br/>
         alter table contratos add column if not exists previsao_pagamento date;<br/>
+        alter table contratos add column if not exists status_pagamento text default 'pendente';<br/>
         create table if not exists receitas (id bigserial primary key, descricao text, categoria text, valor numeric, data date, forma_pagamento text, observacoes text);<br/>
         alter table receitas disable row level security;<br/>
         grant all on receitas to anon;<br/>
