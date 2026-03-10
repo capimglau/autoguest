@@ -522,7 +522,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     if (cl && cl.vencimento_cnh && cl.vencimento_cnh < hoje) { if (!confirm("CNH do cliente VENCIDA em " + cl.vencimento_cnh + ". Continuar mesmo assim?")) return; }
     setLoading(true);
     try {
-      const payload = Object.assign({}, form, { valor_total: calcValor(form) });
+      const payload = Object.assign({}, form, { valor_total: (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2) });
       if (edit) { const u = await db.patch("contratos", edit, payload); setContratos(p => p.map(c => c.id === edit ? Object.assign({}, c, u) : c)); toast("Atualizado!"); }
       else { const c = await db.post("contratos", payload); setContratos(p => [c].concat(p)); await db.patch("veiculos", form.veiculo_id, { status: "alugado" }); setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: "alugado" }) : v)); toast("Contrato No " + numCt(c.id) + " criado!"); }
       setModal(false);
@@ -712,10 +712,23 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         <Lbl label="Checklist Vistoria Devolucao"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_devolucao || ""} onChange={e => F("checklist_devolucao", e.target.value)} placeholder="Ex: Arranhao no para-choque traseiro..." /></Lbl>
         <Lbl label="Observacoes"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 50 })} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
         {form.veiculo_id && form.data_inicio && form.data_fim && (
-          <div style={{ background: C.bg, borderRadius: 12, padding: "12px 16px", textAlign: "center" }}>
-            <span style={{ fontSize: 12, color: C.sub }}>Estimativa: </span>
-            <span style={{ fontWeight: 800, fontSize: 20, color: C.green }}>{fmtBRL(calcValor(form))}</span>
-            <span style={{ fontSize: 12, color: C.sub }}> ({dias(form)} dias)</span>
+          <div style={{ background: C.bg, borderRadius: 12, padding: "12px 16px" }}>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <Lbl label="Desconto (R$)" flex={1}><input style={FI} type="number" step="0.01" min="0" value={form.desconto || ""} onChange={e => F("desconto", e.target.value)} placeholder="0,00" /></Lbl>
+              <Lbl label="Acrescimo (R$)" flex={1}><input style={FI} type="number" step="0.01" min="0" value={form.acrescimo || ""} onChange={e => F("acrescimo", e.target.value)} placeholder="0,00" /></Lbl>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              {(parseFloat(form.desconto||0) > 0 || parseFloat(form.acrescimo||0) > 0) && (
+                <div style={{ fontSize: 12, color: C.sub, marginBottom: 4 }}>
+                  Base: {fmtBRL(calcValor(form))}
+                  {parseFloat(form.desconto||0) > 0 && <span style={{ color: C.green }}> - desc. {fmtBRL(form.desconto)}</span>}
+                  {parseFloat(form.acrescimo||0) > 0 && <span style={{ color: C.red }}> + acresc. {fmtBRL(form.acrescimo)}</span>}
+                </div>
+              )}
+              <span style={{ fontSize: 12, color: C.sub }}>Total: </span>
+              <span style={{ fontWeight: 800, fontSize: 22, color: C.green }}>{fmtBRL((parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2))}</span>
+              <span style={{ fontSize: 12, color: C.sub }}> ({dias(form)} dias)</span>
+            </div>
           </div>
         )}
         <button style={Btn()} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar Contrato"}</button>
@@ -990,6 +1003,28 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   receitas.forEach(function(r) { var mes = (r.data || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(r.valor || 0); });
   var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)))).sort().reverse().slice(0, 12);
 
+  var mesAtualFin = new Date().toISOString().slice(0, 7);
+  var [filtroResumoMes, setFiltroResumoMes] = useState(mesAtualFin);
+
+  // Receitas do mês selecionado (contratos com previsao_pagamento no mês)
+  var recMesContratos = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === filtroResumoMes);
+  var recMesPrevista = recMesContratos.reduce((s,c) => s+parseFloat(c.valor_total||0),0);
+  var recMesRecebida = recMesContratos.filter(c => c.status_pagamento === "pago").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
+  var recMesPendente = recMesContratos.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
+  var recMesManual = receitas.filter(r => (r.data||"").slice(0,7) === filtroResumoMes).reduce((s,r) => s+parseFloat(r.valor||0),0);
+
+  // Despesas do mês selecionado
+  var despMes = despesas.filter(d => (d.data||"").slice(0,7) === filtroResumoMes).reduce((s,d) => s+parseFloat(d.valor||0),0);
+  var contasMes = contas.filter(c => c.vencimento && c.vencimento.slice(0,7) === filtroResumoMes);
+  var contasMesPrevista = contasMes.reduce((s,c) => s+parseFloat(c.valor||0),0);
+  var contasMesPaga = contasMes.filter(c => c.status === "pago").reduce((s,c) => s+parseFloat(c.valor||0),0);
+  var contasMesPendente = contasMes.filter(c => c.status === "pendente").reduce((s,c) => s+parseFloat(c.valor||0),0);
+  var manMes = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes).reduce((s,m) => s+parseFloat(m.custo||0),0);
+  var totalDespMes = despMes + contasMesPaga + manMes;
+
+  var saldoMes = (recMesRecebida + recMesManual) - totalDespMes;
+  var saldoProjetado = (recMesPrevista + recMesManual) - (contasMesPrevista + despMes + manMes);
+
   var CATS_DESP = ["Combustivel", "Limpeza", "Impostos", "Salarios", "Aluguel", "Manutencao", "Marketing", "Seguros", "Outros"];
   var CATS_REC = ["Locacao", "Servico", "Multa Cobrada", "Deposito", "Outros"];
   var CATS_CONTA = ["Fornecedor", "Imposto", "Aluguel", "Salario", "Seguro", "Servico", "Outros"];
@@ -1009,23 +1044,59 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
     </div>
 
     {tab === "resumo" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Stat icon="💰" label="Receita Total" val={fmtBRL(totalReceita)} color={C.green} />
-        <Stat icon="🚗" label="De Contratos" val={fmtBRL(receitaContratos)} color={C.teal} />
-        <Stat icon="➕" label="Outras Receitas" val={fmtBRL(receitaManual)} color={C.blue} />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <input style={Object.assign({}, FI, { width: 170 })} type="month" value={filtroResumoMes} onChange={e => setFiltroResumoMes(e.target.value)} />
+        <span style={{ fontSize: 13, color: C.sub }}>Consolidado de {filtroResumoMes}</span>
       </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Stat icon="📉" label="Despesas" val={fmtBRL(totalDesp)} color={C.red} />
-        <Stat icon="🔧" label="Manutencoes" val={fmtBRL(totalMan)} color={C.purple} />
-        <Stat icon="⚖️" label="Lucro Liquido" val={fmtBRL(lucro)} color={lucro >= 0 ? C.green : C.red} />
-      </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Stat icon="📅" label="Contas a Pagar" val={fmtBRL(totalPagar)} color={C.orange} />
-        <Stat icon="🚨" label="Contas Vencidas" val={contasVencidas.length} color={C.red} />
-        <Stat icon="✅" label="Multas Recebidas" val={fmtBRL(totalMultasPagas)} color={C.orange} />
-      </div>
+
       <div style={CARD}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>DRE Simplificado</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Receitas do Mês</div>
+        {[
+          { label: "Contratos previstos", val: recMesPrevista, color: C.sub },
+          { label: "✅ Já recebidos", val: recMesRecebida, color: C.green },
+          { label: "⏳ A receber", val: recMesPendente, color: C.orange },
+          { label: "➕ Outras receitas lançadas", val: recMesManual, color: C.blue },
+          { label: "Total recebido", val: recMesRecebida + recMesManual, color: C.green, bold: true },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 4 ? "1px solid " + C.border : "none" }}>
+            <span style={{ fontWeight: row.bold ? 800 : 400, fontSize: row.bold ? 15 : 13 }}>{row.label}</span>
+            <span style={{ fontWeight: 800, color: row.color }}>{fmtBRL(row.val)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={CARD}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Despesas do Mês</div>
+        {[
+          { label: "Contas previstas", val: contasMesPrevista, color: C.sub },
+          { label: "✅ Contas pagas", val: contasMesPaga, color: C.red },
+          { label: "⏳ Contas a pagar", val: contasMesPendente, color: C.orange },
+          { label: "Despesas lançadas", val: despMes, color: C.red },
+          { label: "Manutenções", val: manMes, color: C.purple },
+          { label: "Total saídas realizadas", val: totalDespMes, color: C.red, bold: true },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 5 ? "1px solid " + C.border : "none" }}>
+            <span style={{ fontWeight: row.bold ? 800 : 400, fontSize: row.bold ? 15 : 13 }}>{row.label}</span>
+            <span style={{ fontWeight: 800, color: row.color }}>{fmtBRL(row.val)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={CARD}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Consolidação</div>
+        {[
+          { label: "Saldo realizado (recebido - pago)", val: saldoMes, bold: true },
+          { label: "Saldo projetado (previsto - previsto)", val: saldoProjetado },
+        ].map((row, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i < 1 ? "1px solid " + C.border : "none" }}>
+            <span style={{ fontWeight: row.bold ? 800 : 500, fontSize: row.bold ? 15 : 13 }}>{row.label}</span>
+            <span style={{ fontWeight: 800, fontSize: row.bold ? 18 : 15, color: row.val >= 0 ? C.green : C.red }}>{fmtBRL(row.val)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={CARD}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>DRE Acumulado (todos os periodos)</div>
         {[
           { label: "Receita de Locacoes", val: receitaContratos, color: C.green },
           { label: "Outras Receitas", val: receitaManual, color: C.green },
@@ -1381,6 +1452,8 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table contratos add column if not exists forma_pagamento text;<br/>
         alter table contratos add column if not exists previsao_pagamento date;<br/>
         alter table contratos add column if not exists status_pagamento text default 'pendente';<br/>
+        alter table contratos add column if not exists desconto numeric default 0;<br/>
+        alter table contratos add column if not exists acrescimo numeric default 0;<br/>
         create table if not exists receitas (id bigserial primary key, descricao text, categoria text, valor numeric, data date, forma_pagamento text, observacoes text);<br/>
         alter table receitas disable row level security;<br/>
         grant all on receitas to anon;<br/>
