@@ -567,6 +567,27 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
   }
   const SC = { ativo: C.blue, concluido: C.green, cancelado: C.red };
   var veicsDisp = veicsDisponiveis();
+  var mesAtual = new Date().toISOString().slice(0, 7);
+  var proxMesDate = new Date(); proxMesDate.setMonth(proxMesDate.getMonth() + 1);
+  var proxMes = proxMesDate.toISOString().slice(0, 7);
+
+  function filtrarContratos(lista) {
+    return lista.filter(c => {
+      if (filter === "todos") {}
+      else if (filter === "ativo" || filter === "concluido" || filter === "cancelado") { if (c.status !== filter) return false; }
+      else if (filter === "mes_vigente") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
+      else if (filter === "proximo_mes") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== proxMes) return false; }
+      else if (filter === "a_receber") { if (c.status_pagamento === "pago" || c.status_pagamento === "isento") return false; }
+      else if (filter === "recebidos_mes") { if (c.status_pagamento !== "pago" || !c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
+      if (filDe && c.data_inicio && c.data_inicio < filDe) return false;
+      if (filAte && c.data_fim && c.data_fim > filAte) return false;
+      if (filVeiculo && String(c.veiculo_id) !== filVeiculo) return false;
+      if (filCliente && String(c.cliente_id) !== filCliente) return false;
+      return true;
+    });
+  }
+  var fil2 = filtrarContratos(contratos);
+  var totalFil = fil2.reduce((s,c) => s + parseFloat(c.valor_total||0), 0);
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
       <div style={{ fontSize: 24, fontWeight: 800 }}>Contratos</div>
@@ -587,22 +608,35 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         <Lbl label="Cliente" flex={1}><select style={FI} value={filCliente} onChange={e => setFilCliente(e.target.value)}><option value="">Todos</option>{clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></Lbl>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 13, color: C.sub }}>{fil.length} contrato(s) encontrado(s)</span>
+        <span style={{ fontSize: 13, color: C.sub }}>{fil2.length} contrato(s) encontrado(s)</span>
         {temFiltro && <button style={Ghost(C.red)} onClick={limparFiltros}>Limpar filtros</button>}
       </div>
     </div>}
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {["todos", "ativo", "concluido", "cancelado"].map(x => (
-        <button key={x} onClick={() => setFilter(x)} style={Object.assign({}, Ghost(filter === x ? C.blue : C.gray), { background: filter === x ? C.blue : "transparent", color: filter === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{x}</button>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {[
+        ["todos", "Todos", C.gray],
+        ["ativo", "Ativos", C.blue],
+        ["concluido", "Concluidos", C.green],
+        ["cancelado", "Cancelados", C.red],
+        ["mes_vigente", "Mês Vigente", C.teal],
+        ["proximo_mes", "Próx. Mês", C.purple],
+        ["a_receber", "A Receber", C.orange],
+        ["recebidos_mes", "Recebidos/Mês", C.green],
+      ].map(([val, label, cor]) => (
+        <button key={val} onClick={() => setFilter(val)} style={Object.assign({}, Ghost(filter === val ? cor : C.gray), { background: filter === val ? cor : "transparent", color: filter === val ? "#fff" : C.gray, fontSize: 12 })}>{label}</button>
       ))}
     </div>
+    {fil2.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 2px" }}>
+      <span style={{ fontSize: 13, color: C.sub }}>{fil2.length} contrato(s)</span>
+      <span style={{ fontWeight: 800, color: C.green, fontSize: 15 }}>{fmtBRL(totalFil)}</span>
+    </div>}
     <div style={CARD}>
-      {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
-      {fil.map((c, i) => {
+      {fil2.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
+      {fil2.map((c, i) => {
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
         var pagAtrasado = (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
         var SPG = { pendente: C.orange, pago: C.green, parcial: C.blue, isento: C.gray };
-        return <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
+        return <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil2.length - 1 ? "1px solid " + C.border : "none" }}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>Contrato No {numCt(c.id)}</div>
