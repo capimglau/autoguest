@@ -199,19 +199,29 @@ function shareWhatsApp(ct, cl, ve, emp) {
 
 // ── INICIO ─────────────────────────────────────────────────────────────────
 function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, receitas, contas }) {
-  const disp = veiculos.filter(v => v.status === "disponivel").length;
-  const ativos = contratos.filter(c => c.status === "ativo").length;
-  const mPend = multas.filter(m => m.status === "pendente").length;
-  const manAt = manutencoes.filter(m => m.status === "em_andamento").length;
-  const receitaContratos = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
-  const receitaManual = (receitas || []).reduce((s, r) => s + parseFloat(r.valor || 0), 0);
-  const totalReceita = receitaContratos + receitaManual;
-  const totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
-  const lucro = totalReceita - totalDesp;
   const hoje = new Date().toISOString().split("T")[0];
+  const mesAtual = new Date().toISOString().slice(0, 7);
   const em7dias = new Date(); em7dias.setDate(em7dias.getDate() + 7); const str7 = em7dias.toISOString().split("T")[0];
   const em30dias = new Date(); em30dias.setDate(em30dias.getDate() + 30); const str30 = em30dias.toISOString().split("T")[0];
   const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
+  const nomeMes = new Date().toLocaleString("pt-BR", { month: "long", year: "numeric" });
+
+  const disponiveis = veiculos.filter(v => v.status === "disponivel").length;
+  const alugados = veiculos.filter(v => v.status === "alugado").length;
+  const emManut = veiculos.filter(v => v.status === "manutencao").length;
+  const totalFrota = veiculos.length;
+  const taxaOcup = totalFrota > 0 ? Math.round((alugados / totalFrota) * 100) : 0;
+
+  const ctsMes = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesAtual);
+  const recMes = ctsMes.filter(c => c.status_pagamento === "pago").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
+  const prevMes = ctsMes.reduce((s,c) => s+parseFloat(c.valor_total||0),0);
+  const pendMes = ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length;
+  const pagosMes = ctsMes.filter(c => c.status_pagamento === "pago").length;
+
+  const receitaContratos = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  const receitaManual = (receitas || []).reduce((s, r) => s + parseFloat(r.valor || 0), 0);
+  const totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
+  const lucro = receitaContratos + receitaManual - totalDesp;
 
   const contratosAtrasados = contratos.filter(c => c.status === "ativo" && (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje);
   const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7);
@@ -221,7 +231,6 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const contasVencidas = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento < hoje);
   const contasVencendo = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento >= hoje && c.vencimento <= str3);
   const manutProlongadas = manutencoes.filter(m => m.status === "em_andamento" && m.data_saida && m.data_saida < hoje);
-
   const totalAlertas = contratosAtrasados.length + cnhVencida.length + contasVencidas.length + manutProlongadas.length;
 
   function AlertBox({ cor, icon, titulo, items, sub }) {
@@ -233,69 +242,104 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
     </div>;
   }
 
-  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-      <div><div style={{ fontSize: 24, fontWeight: 800 }}>AutoGest Pro</div><div style={{ fontSize: 14, color: C.sub }}>Painel de Gestao</div></div>
-      {totalAlertas > 0 && <div style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 13, fontWeight: 800 }}>{totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}</div>}
+  return <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>AutoGest Pro</div>
+        <div style={{ fontSize: 13, color: C.sub, marginTop: 1, textTransform: "capitalize" }}>{nomeMes}</div>
+      </div>
+      {totalAlertas > 0 && <div style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "4px 14px", fontSize: 13, fontWeight: 700 }}>⚠️ {totalAlertas}</div>}
     </div>
 
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <Stat icon="🚗" label="Disponiveis" val={disp} color={C.green} />
-      <Stat icon="📋" label="Ativos" val={ativos} color={C.blue} />
-      <Stat icon="👤" label="Clientes" val={clientes.length} color={C.orange} />
-      <Stat icon="🔧" label="Manutencao" val={manAt} color={C.purple} />
-    </div>
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Receita Total</div><div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{fmtBRL(totalReceita)}</div></div>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Despesas</div><div style={{ fontSize: 20, fontWeight: 800, color: C.red }}>{fmtBRL(totalDesp)}</div></div>
-      <div style={Object.assign({}, CARD, { flex: 1, minWidth: 140 })}><div style={{ fontSize: 11, fontWeight: 700, color: C.sub, marginBottom: 4, textTransform: "uppercase" }}>Lucro</div><div style={{ fontSize: 20, fontWeight: 800, color: lucro >= 0 ? C.green : C.red }}>{fmtBRL(lucro)}</div></div>
+    <div style={{ background: "linear-gradient(135deg, #007AFF 0%, #0055CC 100%)", borderRadius: 20, padding: "20px 20px 16px", color: "#fff" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Recebido em {nomeMes}</div>
+      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>{fmtBRL(recMes)}</div>
+      <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>de {fmtBRL(prevMes)} previstos</div>
+      <div style={{ display: "flex", gap: 20, marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.2)" }}>
+        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 18, fontWeight: 800 }}>{pagosMes}</div></div>
+        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 18, fontWeight: 800, color: pendMes > 0 ? "#FFD60A" : "#fff" }}>{pendMes}</div></div>
+        <div><div style={{ fontSize: 11, opacity: 0.7, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 18, fontWeight: 800, color: contratosAtrasados.length > 0 ? "#FF6B6B" : "#fff" }}>{contratosAtrasados.length}</div></div>
+      </div>
     </div>
 
-    {(contratosAtrasados.length > 0 || contratosVencendo.length > 0 || cnhVencida.length > 0 || cnhVencendo.length > 0 || multasPend.length > 0 || contasVencidas.length > 0 || contasVencendo.length > 0 || manutProlongadas.length > 0) && (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      {/* A Receber no mês */}
+      {(() => { var aRec = ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c)=>s+parseFloat(c.valor_total||0),0); return (
+        <div style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px" }}>
+          <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>A Receber</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: aRec > 0 ? C.orange : C.green, marginTop: 4 }}>{fmtBRL(aRec)}</div>
+          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>neste mês</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>{ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length} contrato(s) pendente(s)</div>
+        </div>
+      ); })()}
+
+      {/* Próximo mês previsto */}
+      {(() => { var proxMesStr = (() => { var d = new Date(); d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,7); })(); var proxVal = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).reduce((s,c)=>s+parseFloat(c.valor_total||0),0); return (
+        <div style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px" }}>
+          <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Próx. Mês</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.teal, marginTop: 4 }}>{fmtBRL(proxVal)}</div>
+          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>receita prevista</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>{contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).length} contrato(s)</div>
+        </div>
+      ); })()}
+
+      <div style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px" }}>
+        <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Resultado</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: lucro >= 0 ? C.green : C.red, marginTop: 4 }}>{fmtBRL(lucro)}</div>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 2 }}>lucro acumulado</div>
+        <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>Desp: <span style={{ color: C.red, fontWeight: 700 }}>{fmtBRL(totalDesp)}</span></div>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px" }}>
+        <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Multas</div>
+        <div style={{ fontSize: 28, fontWeight: 800, color: multasPend.length > 0 ? C.orange : "#1C1C1E", marginTop: 4 }}>{multasPend.length}</div>
+        <div style={{ fontSize: 12, color: C.sub, fontWeight: 500, marginTop: 2 }}>pendentes</div>
+        <div style={{ marginTop: 10, fontSize: 12, color: C.sub }}>Total: <span style={{ fontWeight: 700 }}>{fmtBRL(multasPend.reduce((s,m)=>s+parseFloat(m.valor||0),0))}</span></div>
+      </div>
+    </div>
+
+    {(contratosAtrasados.length > 0 || contratosVencendo.length > 0 || cnhVencida.length > 0 || cnhVencendo.length > 0 || contasVencidas.length > 0 || contasVencendo.length > 0 || manutProlongadas.length > 0) && (
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Central de Alertas</div>
-        <AlertBox cor={C.red} icon="🚨" titulo={"Pagamentos ATRASADOS (" + contratosAtrasados.length + ")"}
-          items={contratosAtrasados.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · pagar ate " + fmtDate(c.previsao_pagamento); })}
-          sub={"Total em atraso: " + fmtBRL(contratosAtrasados.reduce((s,c)=>s+parseFloat(c.valor_total||0),0))} />
+        <div style={{ fontSize: 12, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Central de Alertas</div>
+        <AlertBox cor={C.red} icon="🚨" titulo={"Pagamentos atrasados (" + contratosAtrasados.length + ")"}
+          items={contratosAtrasados.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " · " + (cl && cl.nome || "--") + " · " + fmtDate(c.previsao_pagamento); })}
+          sub={"Total: " + fmtBRL(contratosAtrasados.reduce((s,c)=>s+parseFloat(c.valor_total||0),0))} />
         <AlertBox cor={C.orange} icon="⏰" titulo={"Contratos vencendo em 7 dias (" + contratosVencendo.length + ")"}
-          items={contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " - " + (cl && cl.nome || "--") + " · ate " + fmtDate(c.data_fim); })} />
-        <AlertBox cor={C.red} icon="🪪" titulo={"CNH Vencida (" + cnhVencida.length + ")"}
-          items={cnhVencida.map(c => c.nome + " · venceu em " + fmtDate(c.vencimento_cnh))} />
+          items={contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " · " + (cl && cl.nome || "--") + " · ate " + fmtDate(c.data_fim); })} />
+        <AlertBox cor={C.red} icon="🪪" titulo={"CNH vencida (" + cnhVencida.length + ")"}
+          items={cnhVencida.map(c => c.nome + " · " + fmtDate(c.vencimento_cnh))} />
         <AlertBox cor={C.orange} icon="🪪" titulo={"CNH vencendo em 30 dias (" + cnhVencendo.length + ")"}
-          items={cnhVencendo.map(c => c.nome + " · vence em " + fmtDate(c.vencimento_cnh))} />
-        <AlertBox cor={C.red} icon="💸" titulo={"Contas VENCIDAS (" + contasVencidas.length + ")"}
-          items={contasVencidas.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · venceu em " + fmtDate(c.vencimento))}
-          sub={"Total vencido: " + fmtBRL(contasVencidas.reduce((s,c)=>s+parseFloat(c.valor||0),0))} />
+          items={cnhVencendo.map(c => c.nome + " · " + fmtDate(c.vencimento_cnh))} />
+        <AlertBox cor={C.red} icon="💸" titulo={"Contas vencidas (" + contasVencidas.length + ")"}
+          items={contasVencidas.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · " + fmtDate(c.vencimento))}
+          sub={"Total: " + fmtBRL(contasVencidas.reduce((s,c)=>s+parseFloat(c.valor||0),0))} />
         <AlertBox cor={C.orange} icon="💰" titulo={"Contas vencendo em 3 dias (" + contasVencendo.length + ")"}
-          items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · vence em " + fmtDate(c.vencimento))} />
-        <AlertBox cor={C.orange} icon="⚠️" titulo={"Multas pendentes (" + multasPend.length + ")"}
-          items={[fmtBRL(multasPend.reduce((s,m)=>s+parseFloat(m.valor||0),0)) + " em multas aguardando pagamento"]} />
+          items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · " + fmtDate(c.vencimento))} />
         <AlertBox cor={C.purple} icon="🔧" titulo={"Manutencoes com prazo vencido (" + manutProlongadas.length + ")"}
-          items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " - " + m.tipo + " · prevista para " + fmtDate(m.data_saida); })} />
+          items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " · " + m.tipo + " · " + fmtDate(m.data_saida); })} />
       </div>
     )}
 
     <div style={CARD}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 10 }}>Mês Vigente — Contratos</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 12 }}>Mês Vigente — Contratos</div>
       {(() => {
-        var mesAtual = new Date().toISOString().slice(0,7);
-        var ctsMes = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesAtual);
-        if (ctsMes.length === 0) return <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato com pagamento neste mês</div>;
-        return ctsMes.map((c, i) => {
+        var ctsMesLista = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesAtual);
+        if (ctsMesLista.length === 0) return <div style={{ color: C.sub, textAlign: "center", padding: 20, fontSize: 14 }}>Nenhum contrato com pagamento neste mês</div>;
+        return ctsMesLista.map((c, i) => {
           var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
           var pago = c.status_pagamento === "pago" || c.status_pagamento === "isento";
           var atrasado = !pago && c.previsao_pagamento && c.previsao_pagamento < hoje;
           var cor = pago ? C.green : atrasado ? C.red : C.orange;
           var label = pago ? "recebido" : atrasado ? "atrasado" : "pendente";
-          return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < ctsMes.length - 1 ? "1px solid " + C.border : "none" }}>
+          return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < ctsMesLista.length - 1 ? "1px solid " + C.border : "none" }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)}</div>
               <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} · {ve && ve.placa || "--"}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>📆 Pagar ate: {fmtDate(c.previsao_pagamento)}</div>
-              {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal }}>💳 {c.forma_pagamento}</div>}
+              <div style={{ fontSize: 12, color: C.sub }}>📆 {fmtDate(c.previsao_pagamento)}{c.forma_pagamento && " · " + c.forma_pagamento}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontWeight: 700 }}>{fmtBRL(c.valor_total)}</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{fmtBRL(c.valor_total)}</div>
               <span style={Badge(cor)}>{label}</span>
             </div>
           </div>;
@@ -938,6 +982,125 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
   </div>;
 }
 
+// ── ORCAMENTO PESSOAL ──────────────────────────────────────────────────────
+function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
+  const [itens, setItens] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({});
+  const [edit, setEdit] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const mesAtual = new Date().toISOString().slice(0, 7);
+  const nomeMes = new Date().toLocaleString("pt-BR", { month: "long", year: "numeric" });
+  function F(k, v) { setForm(p => Object.assign({}, p, { [k]: v })); }
+
+  useState(() => { db.get("orcamento_pessoal").then(d => { setItens(d || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
+
+  // Lucro previsto da locadora no mês (receita prevista - despesas do mês)
+  var recLocMes = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesAtual).reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
+  var despLocMes = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
+  var lucroLocadora = Math.max(0, recLocMes - despLocMes);
+
+  var itensMes = itens.filter(it => (it.mes || "") === mesAtual);
+  var entradasExtras = itensMes.filter(it => it.tipo === "receita").reduce((s,it)=>s+parseFloat(it.valor||0),0);
+  var despPessoais = itensMes.filter(it => it.tipo === "despesa").reduce((s,it)=>s+parseFloat(it.valor||0),0);
+  var totalReceita = lucroLocadora + entradasExtras;
+  var saldo = totalReceita - despPessoais;
+  var percentGasto = totalReceita > 0 ? Math.min(100, Math.round((despPessoais / totalReceita) * 100)) : 0;
+
+  var CATS = ["Moradia", "Alimentacao", "Transporte", "Saude", "Lazer", "Educacao", "Investimento", "Vestuario", "Servicos", "Outros"];
+
+  async function save() {
+    if (!form.descricao || !form.valor) return toast("Descricao e valor obrigatorios", "error");
+    setSaving(true);
+    try {
+      var payload = Object.assign({}, form, { mes: mesAtual });
+      if (edit) { const u = await db.patch("orcamento_pessoal", edit, payload); setItens(p => p.map(it => it.id === edit ? Object.assign({}, it, u) : it)); toast("Atualizado!"); }
+      else { const c = await db.post("orcamento_pessoal", payload); setItens(p => [c].concat(p)); toast("Adicionado!"); }
+      setModal(false);
+    } catch(e) { toast("Erro: " + e.message + " — execute o SQL do Orçamento Pessoal nas configurações", "error"); }
+    setSaving(false);
+  }
+  async function remove(id) { if (!confirm("Excluir?")) return; await db.del("orcamento_pessoal", id); setItens(p => p.filter(it => it.id !== id)); toast("Excluido!"); }
+
+  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div>
+        <div style={{ fontSize: 18, fontWeight: 800 }}>Orçamento Pessoal</div>
+        <div style={{ fontSize: 13, color: C.sub, textTransform: "capitalize" }}>{nomeMes}</div>
+      </div>
+      <button style={Btn(C.purple)} onClick={() => { setForm({ tipo: "despesa", categoria: "Moradia" }); setEdit(null); setModal(true); }}>+ Lançamento</button>
+    </div>
+
+    {/* Cartão principal */}
+    <div style={{ background: "linear-gradient(135deg, #AF52DE 0%, #7B2FA8 100%)", borderRadius: 20, padding: "20px 20px 16px", color: "#fff" }}>
+      <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.75, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Saldo do Mês</div>
+      <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, color: saldo >= 0 ? "#fff" : "#FF6B6B" }}>{fmtBRL(saldo)}</div>
+      <div style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>de {fmtBRL(totalReceita)} disponível</div>
+      <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 6, height: 6, marginTop: 14, overflow: "hidden" }}>
+        <div style={{ height: "100%", width: percentGasto + "%", background: percentGasto > 90 ? "#FF6B6B" : percentGasto > 70 ? "#FFD60A" : "#4ADE80", borderRadius: 6 }} />
+      </div>
+      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{percentGasto}% do orçamento utilizado</div>
+    </div>
+
+    {/* KPIs */}
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "14px 12px" }}>
+        <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Locadora</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.blue, marginTop: 4 }}>{fmtBRL(lucroLocadora)}</div>
+        <div style={{ fontSize: 11, color: C.sub }}>lucro previsto</div>
+      </div>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "14px 12px" }}>
+        <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Extras</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.green, marginTop: 4 }}>{fmtBRL(entradasExtras)}</div>
+        <div style={{ fontSize: 11, color: C.sub }}>entradas</div>
+      </div>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "14px 12px" }}>
+        <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Gastos</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.red, marginTop: 4 }}>{fmtBRL(despPessoais)}</div>
+        <div style={{ fontSize: 11, color: C.sub }}>despesas</div>
+      </div>
+    </div>
+
+    {/* Lista */}
+    <div style={CARD}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Lançamentos do Mês</div>
+      {loading && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Carregando...</div>}
+      {!loading && itensMes.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum lançamento neste mês</div>}
+      {itensMes.map((it, i) => <div key={it.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < itensMes.length - 1 ? "1px solid " + C.border : "none" }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{it.descricao}</div>
+          <div style={{ fontSize: 12, color: C.sub }}>{it.categoria}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontWeight: 700, color: it.tipo === "receita" ? C.green : C.red }}>{it.tipo === "receita" ? "+" : "-"}{fmtBRL(it.valor)}</div>
+            <span style={Badge(it.tipo === "receita" ? C.green : C.red)}>{it.tipo}</span>
+          </div>
+          <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: C.sub, padding: "4px 6px" }} onClick={() => { setForm(Object.assign({}, it)); setEdit(it.id); setModal(true); }}>✏️</button>
+          <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: C.red, padding: "4px 6px" }} onClick={() => remove(it.id)}>🗑</button>
+        </div>
+      </div>)}
+    </div>
+
+    <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar Lançamento" : "Novo Lançamento"}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button style={Object.assign({}, Ghost(form.tipo === "despesa" ? C.red : C.gray), { flex: 1, background: form.tipo === "despesa" ? C.red : "transparent", color: form.tipo === "despesa" ? "#fff" : C.gray })} onClick={() => F("tipo", "despesa")}>Despesa</button>
+          <button style={Object.assign({}, Ghost(form.tipo === "receita" ? C.green : C.gray), { flex: 1, background: form.tipo === "receita" ? C.green : "transparent", color: form.tipo === "receita" ? "#fff" : C.gray })} onClick={() => F("tipo", "receita")}>Receita Extra</button>
+        </div>
+        <Lbl label="Descrição *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} placeholder="Ex: Aluguel, Supermercado..." /></Lbl>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
+          <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Outros"} onChange={e => F("categoria", e.target.value)}>{CATS.map(c => <option key={c}>{c}</option>)}</select></Lbl>
+        </div>
+        <Lbl label="Observações"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
+        <button style={Btn(form.tipo === "receita" ? C.green : C.purple)} onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</button>
+      </div>
+    </Modal>
+  </div>;
+}
+
 // ── FINANCEIRO ─────────────────────────────────────────────────────────────
 function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setContas, contratos, manutencoes, multas, toast }) {
   const [modal, setModal] = useState(false);
@@ -1041,8 +1204,8 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     <div style={{ fontSize: 24, fontWeight: 800 }}>Financeiro</div>
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      {[["resumo","📊"],["receitas","💰"],["despesas","📉"],["contas","📅"],["fluxo","📈"]].map(([x, ic]) =>
-        <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{ic} {x}</button>
+      {[["resumo","📊"],["receitas","💰"],["despesas","📉"],["contas","📅"],["fluxo","📈"],["pessoal","🏠"]].map(([x, ic]) =>
+        <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{ic} {x === "pessoal" ? "Orç. Pessoal" : x}</button>
       )}
     </div>
 
@@ -1231,6 +1394,8 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         </table>
       </div>
     </div>}
+
+    {tab === "pessoal" && <OrcamentoPessoal contratos={contratos} despesas={despesas} receitas={receitas} toast={toast} />}
 
     <Modal open={modal} onClose={() => setModal(false)} title={modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : modalTipo === "receita" ? (edit ? "Editar Receita" : "Nova Receita") : (edit ? "Editar Conta" : "Nova Conta")}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1462,7 +1627,13 @@ function Config({ empresa, setEmpresa, toast }) {
         grant all on receitas to anon;<br/>
         create table if not exists contas (id bigserial primary key, descricao text, categoria text, valor numeric, vencimento date, status text default 'pendente', tipo text default 'pagar', observacoes text);<br/>
         alter table contas disable row level security;<br/>
-        grant all on contas to anon;
+        grant all on contas to anon;<br/>
+        <br/>
+        -- Orçamento Pessoal (novo):<br/>
+        create table if not exists orcamento_pessoal (id bigserial primary key, descricao text, categoria text, valor numeric, tipo text default 'despesa', mes text, observacoes text);<br/>
+        alter table orcamento_pessoal disable row level security;<br/>
+        grant all on orcamento_pessoal to anon;<br/>
+        grant usage, select on sequence orcamento_pessoal_id_seq to anon;
       </div>
     </div>
   </div>;
