@@ -54,8 +54,8 @@ const C = { bg: "#F2F2F7", card: "#FFF", border: "#E5E5EA", blue: "#007AFF", red
 const FI = { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #E5E5EA", fontSize: 15, outline: "none", background: "#F2F2F7", color: "#1C1C1E" };
 const CARD = { background: "#FFF", borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,.07)", border: "1px solid #E5E5EA" };
 
-function Btn(bg, sm) { return { background: bg || C.blue, color: "#fff", border: "none", borderRadius: 10, padding: sm ? "8px 14px" : "11px 20px", fontSize: sm ? 13 : 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }; }
-function Ghost(c) { return { background: "transparent", color: c || C.blue, border: "1.5px solid " + (c || C.blue), borderRadius: 10, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }; }
+function Btn(bg, sm) { return { background: bg || C.blue, color: "#fff", border: "none", borderRadius: 10, padding: sm ? "8px 14px" : "11px 20px", fontSize: sm ? 13 : 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
+function Ghost(c) { return { background: "transparent", color: c || C.blue, border: "1.5px solid " + (c || C.blue), borderRadius: 10, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
 function Badge(c) { return { background: c + "22", color: c, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, display: "inline-block", whiteSpace: "nowrap" }; }
 function numCt(id) { return String(id).padStart(5, "0"); }
 function fmtBRL(v) { return "R$ " + parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 }); }
@@ -255,30 +255,30 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
 
 
     {/* Banner principal — 2 colunas: Previsão | Resultado Previsto */}
-    <div style={{ background: "#fff", borderRadius: 20, padding: "20px", border: "1px solid " + C.border }}>
-      <div style={{ fontSize: 11, fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>{nomeMes}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+    <div style={{ background: "#fff", borderRadius: 20, padding: "14px 16px", border: "1px solid " + C.border }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>{nomeMes}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Previsão</div>
-          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -1, color: "#1C1C1E" }}>{fmtBRL(prevMes)}</div>
-          <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>faturamento</div>
+          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Previsão</div>
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: "#1C1C1E" }}>{fmtBRL(prevMes)}</div>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>faturamento</div>
         </div>
         {(() => {
           var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
           var resultPrev = prevMes - despMesAtual;
           return (
-            <div style={{ borderLeft: "1px solid " + C.border, paddingLeft: 16 }}>
-              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Resultado Prev.</div>
-              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -1, color: resultPrev >= 0 ? C.green : C.red }}>{fmtBRL(resultPrev)}</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>após despesas</div>
+            <div style={{ borderLeft: "1px solid " + C.border, paddingLeft: 12 }}>
+              <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Resultado Prev.</div>
+              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: resultPrev >= 0 ? C.green : C.red }}>{fmtBRL(resultPrev)}</div>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>após despesas</div>
             </div>
           );
         })()}
       </div>
-      <div style={{ display: "flex", gap: 0, marginTop: 16, paddingTop: 14, borderTop: "1px solid " + C.border }}>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 17, fontWeight: 800, color: C.green }}>{pagosMes}</div></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 17, fontWeight: 800, color: pendMes > 0 ? C.orange : "#1C1C1E" }}>{pendMes}</div></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 17, fontWeight: 800, color: contratosAtrasados.length > 0 ? C.red : "#1C1C1E" }}>{contratosAtrasados.length}</div></div>
+      <div style={{ display: "flex", gap: 0, marginTop: 12, paddingTop: 10, borderTop: "1px solid " + C.border }}>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 15, fontWeight: 800, color: C.green }}>{pagosMes}</div></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 15, fontWeight: 800, color: pendMes > 0 ? C.orange : "#1C1C1E" }}>{pendMes}</div></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 15, fontWeight: 800, color: contratosAtrasados.length > 0 ? C.red : "#1C1C1E" }}>{contratosAtrasados.length}</div></div>
       </div>
     </div>
 
@@ -733,7 +733,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             {c.status === "ativo" && <button style={Btn(C.green, true)} onClick={() => concluir(c)}>Concluir</button>}
             {c.status === "ativo" && <button style={Btn(C.purple, true)} onClick={() => renovar(c)}>🔄 Renovar</button>}
             {(c.status_pagamento === "pendente" || !c.status_pagamento) && <button style={Btn(C.teal, true)} onClick={async () => { await db.patch("contratos", c.id, { status_pagamento: "pago" }); setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x)); toast("Pagamento registrado!"); }}>💰 Pago</button>}
@@ -894,7 +894,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
             </div>
             <div style={{ textAlign: "right" }}><div style={{ fontWeight: 800, fontSize: 17, color: C.red }}>{fmtBRL(m.valor)}</div><span style={Badge(SC[m.status] || C.gray)}>{m.status}</span>{m.pontos && <div style={{ fontSize: 11, color: C.sub }}>{m.pontos} pts</div>}</div>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             {m.status === "pendente" && <button style={Btn(C.green, true)} onClick={() => pagar(m)}>Pago</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
             <button style={Btn(C.red, true)} onClick={() => remove(m.id)}>✕</button>
@@ -976,7 +976,7 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
           </div></div>
           <div style={{ textAlign: "right" }}>{parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 16, color: C.purple }}>{fmtBRL(m.custo)}</div>}<span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span></div>
         </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {m.status === "em_andamento" && <button style={Btn(C.green, true)} onClick={() => concluir(m)}>Concluir</button>}
           <button style={Ghost(C.purple)} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
           <button style={Btn(C.red, true)} onClick={() => remove(m.id)}>✕</button>
@@ -1386,7 +1386,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
                 <span style={Badge(SC_CONTA[vencida ? "vencido" : c.status] || C.gray)}>{vencida ? "vencida" : c.status}</span>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
               {c.status === "pendente" && <button style={Btn(C.green, true)} onClick={() => pagarConta(c)}>Marcar Pago</button>}
               <button style={Ghost()} onClick={() => openConta(c)}>Editar</button>
               <button style={Btn(C.red, true)} onClick={() => removeConta(c.id)}>✕</button>
