@@ -1671,23 +1671,24 @@ function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState("");
   const [erro, setErro] = useState("");
   const [usarPin, setUsarPin] = useState(false);
-  const PIN_CORRETO = "1234"; // PIN padrão — trocar nas configurações futuramente
+  const [carregando, setCarregando] = useState(false);
+  const PIN_CORRETO = "1234";
+  const RP_ID = location.hostname; // capimglau.github.io
 
   async function tentarBiometrico() {
-    setErro("");
+    setErro(""); setCarregando(true);
     try {
-      if (!window.PublicKeyCredential) { setUsarPin(true); return; }
-      // Tenta criar uma credencial local para autenticação biométrica
+      if (!window.PublicKeyCredential) { setUsarPin(true); setCarregando(false); return; }
       const credId = localStorage.getItem("autogest_cred_id");
       if (!credId) {
-        // Primeira vez: registra a biometria
+        // Primeira vez: registra
         const cred = await navigator.credentials.create({
           publicKey: {
             challenge: crypto.getRandomValues(new Uint8Array(32)),
-            rp: { name: "AutoGest Pro" },
+            rp: { id: RP_ID, name: "AutoGest Pro" },
             user: { id: new Uint8Array(16), name: "usuario", displayName: "Usuário" },
-            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+            pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
             timeout: 60000
           }
         });
@@ -1695,26 +1696,40 @@ function LoginScreen({ onLogin }) {
         onLogin();
       } else {
         // Já registrado: autentica
-        const rawId = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
-        await navigator.credentials.get({
-          publicKey: {
-            challenge: crypto.getRandomValues(new Uint8Array(32)),
-            allowCredentials: [{ type: "public-key", id: rawId }],
-            userVerification: "required",
-            timeout: 60000
-          }
-        });
-        onLogin();
+        try {
+          const rawId = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
+          await navigator.credentials.get({
+            publicKey: {
+              challenge: crypto.getRandomValues(new Uint8Array(32)),
+              rpId: RP_ID,
+              allowCredentials: [{ type: "public-key", id: rawId }],
+              userVerification: "required",
+              timeout: 60000
+            }
+          });
+          onLogin();
+        } catch(e2) {
+          // Credencial inválida/expirada — apaga e tenta registrar de novo
+          localStorage.removeItem("autogest_cred_id");
+          setErro("Face ID expirou. Toque novamente para registrar.");
+        }
       }
     } catch(e) {
-      if (e.name === "NotAllowedError") { setErro("Autenticação cancelada."); }
-      else { setUsarPin(true); }
+      if (e.name === "NotAllowedError") setErro("Cancelado. Tente novamente ou use o PIN.");
+      else if (e.name === "NotSupportedError") { setUsarPin(true); }
+      else { setErro("Face ID indisponível. Use o PIN."); setUsarPin(true); }
     }
+    setCarregando(false);
   }
 
   function tentarPin() {
     if (pin === PIN_CORRETO) { onLogin(); }
     else { setErro("PIN incorreto."); setPin(""); }
+  }
+
+  function resetFaceId() {
+    localStorage.removeItem("autogest_cred_id");
+    setErro("Face ID redefinido. Toque para registrar novamente.");
   }
 
   return <div style={{ minHeight: "100vh", background: "#F2F2F7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -1724,10 +1739,11 @@ function LoginScreen({ onLogin }) {
 
     {!usarPin ? (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%", maxWidth: 280 }}>
-        <button onClick={tentarBiometrico} style={{ width: "100%", background: "#007AFF", color: "#fff", border: "none", borderRadius: 14, padding: "16px 20px", fontSize: 17, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <span style={{ fontSize: 22 }}>􀎽</span> Entrar com Face ID
+        <button onClick={tentarBiometrico} disabled={carregando} style={{ width: "100%", background: carregando ? "#C7C7CC" : "#007AFF", color: "#fff", border: "none", borderRadius: 14, padding: "16px 20px", fontSize: 17, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          {carregando ? "Aguardando..." : "🔐 Entrar com Face ID"}
         </button>
         <button onClick={() => setUsarPin(true)} style={{ background: "none", border: "none", color: "#007AFF", fontSize: 15, cursor: "pointer", fontWeight: 500 }}>Usar PIN</button>
+        <button onClick={resetFaceId} style={{ background: "none", border: "none", color: "#8E8E93", fontSize: 12, cursor: "pointer" }}>Redefinir Face ID</button>
         {erro && <div style={{ color: "#FF3B30", fontSize: 13, textAlign: "center" }}>{erro}</div>}
       </div>
     ) : (
