@@ -292,7 +292,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
             <div style={{ fontSize: 22, fontWeight: 800, color: aRec > 0 ? C.orange : C.green, marginTop: 4 }}>{fmtBRL(aRec)}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length} contrato(s)</div>
           </div>
-          <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
             <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Recebido</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.green, marginTop: 4 }}>{fmtBRL(recMes)}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{pagosMes} contrato(s)</div>
@@ -710,24 +710,24 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
         var pagAtrasado = (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
         var SPG = { pendente: C.orange, pago: C.green, parcial: C.blue, isento: C.gray };
-        return <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil2.length - 1 ? "1px solid " + C.border : "none" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Contrato No {numCt(c.id)}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{cl && cl.nome || "--"} - {ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>📅 {fmtDate(c.data_inicio)} ate {fmtDate(c.data_fim)}</div>
-              {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal }}>💳 {c.forma_pagamento}</div>}
-              {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 400 }}>
-                {pagAtrasado ? "🚨 Pag. ATRASADO desde " : "📆 Pagar ate: "}{fmtDate(c.previsao_pagamento)}
-              </div>}
+        var spLabel = pagAtrasado ? "atrasado" : c.status_pagamento === "pago" ? "pago" : c.status_pagamento === "isento" ? "isento" : c.status_pagamento === "parcial" ? "parcial" : "a receber";
+        var spCor = pagAtrasado ? C.red : SPG[c.status_pagamento || "pendente"];
+        return <div key={c.id} style={{ padding: "14px 0", borderBottom: i < fil2.length - 1 ? "1px solid " + C.border : "none" }}>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontWeight: 800, fontSize: 17 }}>{cl && cl.nome || "--"}</div>
+            <div style={{ fontSize: 13, color: C.sub, marginTop: 1 }}>No {numCt(c.id)} · {ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
+            <div style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>📅 {fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
+            {c.forma_pagamento && <div style={{ fontSize: 12, color: C.teal, marginTop: 1 }}>💳 {c.forma_pagamento}</div>}
+            {c.previsao_pagamento && <div style={{ fontSize: 13, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 500, marginTop: 2 }}>
+              {pagAtrasado ? "🚨 " : "📆 "}Data Pagamento: {fmtDate(c.previsao_pagamento)}
+            </div>}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
+              <span style={Badge(spCor)}>{spLabel}</span>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontWeight: 800, fontSize: 16, color: C.green }}>{fmtBRL(c.valor_total)}</div>
-              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", flexWrap: "wrap", marginTop: 4 }}>
-                <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
-                <span style={Badge(SPG[c.status_pagamento || "pendente"])}>{c.status_pagamento || "pendente"}</span>
-              </div>
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: C.green }}>{fmtBRL(c.valor_total)}</div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             {c.status === "ativo" && <button style={Btn(C.green, true)} onClick={() => concluir(c)}>Concluir</button>}
