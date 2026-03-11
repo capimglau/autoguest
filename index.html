@@ -301,25 +301,38 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       );
     })()}
 
-    {/* Linha 2: Resultado Parcial | Próx. Mês */}
+    {/* Linha 2: Despesas | Resultado Parcial */}
     {(() => {
       var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
       var resultParcial = recMes - despMesAtual;
-      var proxMesStr = (() => { var d = new Date(); d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,7); })();
-      var proxVal = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
-      var proxQt = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).length;
       return (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
+          </div>
           <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
             <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Resultado Parcial</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: resultParcial >= 0 ? C.green : C.red, marginTop: 4 }}>{fmtBRL(resultParcial)}</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>recebido - despesas</div>
           </div>
-          <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Próx. Mês</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.teal, marginTop: 4 }}>{fmtBRL(proxVal)}</div>
+        </div>
+      );
+    })()}
+
+    {/* Linha 3: Próx. Mês - largura total */}
+    {(() => {
+      var proxMesStr = (() => { var d = new Date(); d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,7); })();
+      var proxVal = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
+      var proxQt = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).length;
+      return (
+        <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Próximo Mês</div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{proxQt} contrato(s)</div>
           </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.teal }}>{fmtBRL(proxVal)}</div>
         </div>
       );
     })()}
@@ -1087,18 +1100,37 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
       <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10 }}>Lançamentos do Mês</div>
       {loading && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Carregando...</div>}
       {!loading && itensMes.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum lançamento neste mês</div>}
-      {itensMes.map((it, i) => <div key={it.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < itensMes.length - 1 ? "1px solid " + C.border : "none" }}>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{it.descricao}</div>
-          <div style={{ fontSize: 12, color: C.sub }}>{it.categoria}</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {itensMes.map((it, i) => <div key={it.id} style={{ padding: "12px 0", borderBottom: i < itensMes.length - 1 ? "1px solid " + C.border : "none" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{it.descricao}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>{it.categoria}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>
+              {it.data && <span>Previsão: {fmtDate(it.data)}</span>}
+              {it.data_pagamento && <span style={{ color: it.tipo === "receita" ? C.green : C.red }}> · {it.tipo === "receita" ? "Recebido" : "Pago"}: {fmtDate(it.data_pagamento)}</span>}
+            </div>
+          </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontWeight: 700, color: it.tipo === "receita" ? C.green : C.red }}>{it.tipo === "receita" ? "+" : "-"}{fmtBRL(it.valor)}</div>
-            <span style={Badge(it.tipo === "receita" ? C.green : C.red)}>{it.tipo}</span>
+            <span style={Badge(it.status === "pago" || it.status === "recebido" ? (it.tipo === "receita" ? C.green : C.red) : C.orange)}>{it.status === "pago" || it.status === "recebido" ? (it.tipo === "receita" ? "recebido" : "pago") : "previsto"}</span>
           </div>
-          <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: C.sub, padding: "4px 6px" }} onClick={() => { setForm(Object.assign({}, it)); setEdit(it.id); setModal(true); }}>✏️</button>
-          <button style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: C.red, padding: "4px 6px" }} onClick={() => remove(it.id)}>🗑</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
+          {it.status !== "pago" && it.status !== "recebido" && <button style={Ghost(it.tipo === "receita" ? C.green : C.red)} onClick={async () => {
+            var dt = prompt("Data (" + (it.tipo === "receita" ? "recebimento" : "pagamento") + "):", new Date().toISOString().split("T")[0]);
+            if (!dt) return;
+            var novoStatus = it.tipo === "receita" ? "recebido" : "pago";
+            var upd = await db.patch("orcamento_pessoal", it.id, { status: novoStatus, data_pagamento: dt });
+            setItens(p => p.map(x => x.id === it.id ? Object.assign({}, x, upd) : x));
+            toast("Baixado!");
+          }}>{it.tipo === "receita" ? "✅ Receber" : "💸 Baixar"}</button>}
+          {(it.status === "pago" || it.status === "recebido") && <button style={Ghost(C.sub)} onClick={async () => {
+            var upd = await db.patch("orcamento_pessoal", it.id, { status: "previsto", data_pagamento: null });
+            setItens(p => p.map(x => x.id === it.id ? Object.assign({}, x, upd) : x));
+            toast("Estornado!");
+          }}>↩ Estornar</button>}
+          <button style={Ghost()} onClick={() => { setForm(Object.assign({}, it)); setEdit(it.id); setModal(true); }}>Editar</button>
+          <button style={Ghost(C.red)} onClick={() => remove(it.id)}>✕</button>
         </div>
       </div>)}
     </div>
@@ -1106,16 +1138,17 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
     <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar Lançamento" : "Novo Lançamento"}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", gap: 10 }}>
-          <button style={Object.assign({}, Ghost(form.tipo === "despesa" ? C.red : C.gray), { flex: 1, background: form.tipo === "despesa" ? C.red : "transparent", color: form.tipo === "despesa" ? "#fff" : C.gray })} onClick={() => F("tipo", "despesa")}>Despesa</button>
-          <button style={Object.assign({}, Ghost(form.tipo === "receita" ? C.green : C.gray), { flex: 1, background: form.tipo === "receita" ? C.green : "transparent", color: form.tipo === "receita" ? "#fff" : C.gray })} onClick={() => F("tipo", "receita")}>Receita Extra</button>
+          <button style={{ flex: 1, background: form.tipo === "despesa" ? C.sub : "transparent", color: form.tipo === "despesa" ? "#fff" : C.sub, border: "1.5px solid " + C.sub, borderRadius: 10, padding: "10px", fontWeight: 600, cursor: "pointer" }} onClick={() => F("tipo", "despesa")}>Despesa</button>
+          <button style={{ flex: 1, background: form.tipo === "receita" ? C.sub : "transparent", color: form.tipo === "receita" ? "#fff" : C.sub, border: "1.5px solid " + C.sub, borderRadius: 10, padding: "10px", fontWeight: 600, cursor: "pointer" }} onClick={() => F("tipo", "receita")}>Receita Extra</button>
         </div>
         <Lbl label="Descrição *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} placeholder="Ex: Aluguel, Supermercado..." /></Lbl>
         <div style={{ display: "flex", gap: 10 }}>
           <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
-          <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Outros"} onChange={e => F("categoria", e.target.value)}>{CATS.map(c => <option key={c}>{c}</option>)}</select></Lbl>
+          <Lbl label="Data Prevista" flex={1}><input style={FI} type="date" value={form.data || ""} onChange={e => F("data", e.target.value)} /></Lbl>
         </div>
+        <Lbl label="Categoria"><select style={FI} value={form.categoria || "Outros"} onChange={e => F("categoria", e.target.value)}>{CATS.map(c => <option key={c}>{c}</option>)}</select></Lbl>
         <Lbl label="Observações"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
-        <button style={Btn(form.tipo === "receita" ? C.green : C.purple)} onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</button>
+        <button style={Btn(C.purple)} onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</button>
       </div>
     </Modal>
   </div>;
@@ -1302,23 +1335,51 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
-          <span style={{ fontWeight: 700, color: C.green }}>{fmtBRL(recFiltradas.reduce((s,r)=>s+parseFloat(r.valor||0),0))}</span>
         </div>
         <button style={Btn(C.green)} onClick={() => openRec(null)}>+ Receita</button>
       </div>
+      {/* Totalizadores */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Previsto</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.blue, marginTop: 2 }}>{fmtBRL(recFiltradas.reduce((s,r)=>s+parseFloat(r.valor||0),0))}</div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Recebido</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.green, marginTop: 2 }}>{fmtBRL(recFiltradas.filter(r=>r.status==="recebido").reduce((s,r)=>s+parseFloat(r.valor||0),0))}</div>
+        </div>
+      </div>
       <div style={CARD}>
-        {recFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma receita manual neste periodo</div>}
+        {recFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma receita neste período</div>}
         {recFiltradas.map((r, i) => (
-          <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < recFiltradas.length - 1 ? "1px solid " + C.border : "none", flexWrap: "wrap", gap: 8 }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>{r.descricao}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{r.categoria}{r.forma_pagamento && " · " + r.forma_pagamento} · {r.data}</div>
-              {r.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{r.observacoes}</div>}
+          <div key={r.id} style={{ padding: "12px 0", borderBottom: i < recFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{r.descricao}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>{r.categoria}{r.forma_pagamento && " · " + r.forma_pagamento}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>Previsão: {fmtDate(r.data)}{r.data_pagamento && <span style={{ color: C.green }}> · Recebido: {fmtDate(r.data_pagamento)}</span>}</div>
+                {r.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{r.observacoes}</div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 800, color: r.status === "recebido" ? C.green : C.blue }}>{fmtBRL(r.valor)}</div>
+                <span style={Badge(r.status === "recebido" ? C.green : C.blue)}>{r.status === "recebido" ? "recebido" : "previsto"}</span>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontWeight: 800, color: C.green }}>{fmtBRL(r.valor)}</span>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
+              {r.status !== "recebido" && <button style={Ghost(C.green)} onClick={async () => {
+                var dt = prompt("Data do recebimento (AAAA-MM-DD):", new Date().toISOString().split("T")[0]);
+                if (!dt) return;
+                var upd = await db.patch("receitas", r.id, { status: "recebido", data_pagamento: dt });
+                setReceitas(p => p.map(x => x.id === r.id ? Object.assign({}, x, upd) : x));
+                toast("Receita baixada!");
+              }}>✅ Baixar</button>}
+              {r.status === "recebido" && <button style={Ghost(C.sub)} onClick={async () => {
+                var upd = await db.patch("receitas", r.id, { status: "previsto", data_pagamento: null });
+                setReceitas(p => p.map(x => x.id === r.id ? Object.assign({}, x, upd) : x));
+                toast("Estornado!");
+              }}>↩ Estornar</button>}
               <button style={Ghost()} onClick={() => openRec(r)}>Editar</button>
-              <button style={Btn(C.red, true)} onClick={() => removeReceita(r.id)}>✕</button>
+              <button style={Ghost(C.red)} onClick={() => removeReceita(r.id)}>✕</button>
             </div>
           </div>
         ))}
@@ -1329,23 +1390,51 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
-          <span style={{ fontWeight: 700, color: C.red }}>{fmtBRL(despFiltradas.reduce((s,d)=>s+parseFloat(d.valor||0),0))}</span>
         </div>
         <button style={Btn(C.red)} onClick={() => openDesp(null)}>+ Despesa</button>
       </div>
+      {/* Totalizadores */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Previsto</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.orange, marginTop: 2 }}>{fmtBRL(despFiltradas.reduce((s,d)=>s+parseFloat(d.valor||0),0))}</div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase" }}>Pago</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.red, marginTop: 2 }}>{fmtBRL(despFiltradas.filter(d=>d.status==="pago").reduce((s,d)=>s+parseFloat(d.valor||0),0))}</div>
+        </div>
+      </div>
       <div style={CARD}>
-        {despFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma despesa neste periodo</div>}
+        {despFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma despesa neste período</div>}
         {despFiltradas.map((d, i) => (
-          <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < despFiltradas.length - 1 ? "1px solid " + C.border : "none", flexWrap: "wrap", gap: 8 }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>{d.descricao}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{d.categoria} · {d.data}</div>
-              {d.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{d.observacoes}</div>}
+          <div key={d.id} style={{ padding: "12px 0", borderBottom: i < despFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>{d.descricao}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>{d.categoria}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>Previsão: {fmtDate(d.data)}{d.data_pagamento && <span style={{ color: C.red }}> · Pago: {fmtDate(d.data_pagamento)}</span>}</div>
+                {d.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{d.observacoes}</div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 800, color: d.status === "pago" ? C.red : C.orange }}>{fmtBRL(d.valor)}</div>
+                <span style={Badge(d.status === "pago" ? C.red : C.orange)}>{d.status === "pago" ? "pago" : "previsto"}</span>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontWeight: 800, color: C.red }}>{fmtBRL(d.valor)}</span>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
+              {d.status !== "pago" && <button style={Ghost(C.red)} onClick={async () => {
+                var dt = prompt("Data do pagamento (AAAA-MM-DD):", new Date().toISOString().split("T")[0]);
+                if (!dt) return;
+                var upd = await db.patch("despesas", d.id, { status: "pago", data_pagamento: dt });
+                setDespesas(p => p.map(x => x.id === d.id ? Object.assign({}, x, upd) : x));
+                toast("Despesa baixada!");
+              }}>💸 Baixar</button>}
+              {d.status === "pago" && <button style={Ghost(C.sub)} onClick={async () => {
+                var upd = await db.patch("despesas", d.id, { status: "previsto", data_pagamento: null });
+                setDespesas(p => p.map(x => x.id === d.id ? Object.assign({}, x, upd) : x));
+                toast("Estornado!");
+              }}>↩ Estornar</button>}
               <button style={Ghost()} onClick={() => openDesp(d)}>Editar</button>
-              <button style={Btn(C.red, true)} onClick={() => removeDespesa(d.id)}>✕</button>
+              <button style={Ghost(C.red)} onClick={() => removeDespesa(d.id)}>✕</button>
             </div>
           </div>
         ))}
@@ -1653,7 +1742,14 @@ function Config({ empresa, setEmpresa, toast }) {
         create table if not exists orcamento_pessoal (id bigserial primary key, descricao text, categoria text, valor numeric, tipo text default 'despesa', mes text, observacoes text);<br/>
         alter table orcamento_pessoal disable row level security;<br/>
         grant all on orcamento_pessoal to anon;<br/>
-        grant usage, select on sequence orcamento_pessoal_id_seq to anon;
+        grant usage, select on sequence orcamento_pessoal_id_seq to anon;<br/>
+        alter table receitas add column if not exists status text default 'previsto';<br/>
+        alter table receitas add column if not exists data_pagamento date;<br/>
+        alter table despesas add column if not exists status text default 'previsto';<br/>
+        alter table despesas add column if not exists data_pagamento date;<br/>
+        alter table orcamento_pessoal add column if not exists status text default 'previsto';<br/>
+        alter table orcamento_pessoal add column if not exists data date;<br/>
+        alter table orcamento_pessoal add column if not exists data_pagamento date;
       </div>
     </div>
   </div>;
