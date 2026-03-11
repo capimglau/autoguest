@@ -697,7 +697,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         ["concluido", "Concluidos", C.gray],
         ["todos", "Todos", C.gray],
       ].map(([val, label, cor]) => (
-        <button key={val} onClick={() => setFilter(val)} style={Object.assign({}, Ghost(filter === val ? cor : C.gray), { background: filter === val ? cor : "transparent", color: filter === val ? "#fff" : C.gray, fontSize: 12 })}>{label}</button>
+        <button key={val} onClick={() => setFilter(val)} style={{ background: filter === val ? C.blue : "transparent", color: filter === val ? "#fff" : C.sub, border: "1.5px solid " + (filter === val ? C.blue : "#C7C7CC"), borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>{label}</button>
       ))}
     </div>
     {fil2.length > 0 && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 2px" }}>
@@ -716,7 +716,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
           <div style={{ marginBottom: 6 }}>
             <div style={{ fontWeight: 800, fontSize: 15 }}>{cl && cl.nome || "--"}</div>
             <div style={{ fontSize: 13, color: C.sub, marginTop: 1 }}>No {numCt(c.id)} · <span style={{ fontWeight: 800, color: "#1C1C1E" }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}</div>
-            <div style={{ fontSize: 15, color: C.sub, marginTop: 2 }}>📅 {fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
+            <div style={{ fontSize: 14, color: C.sub, marginTop: 2 }}>📅 {fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
             {c.previsao_pagamento && <div style={{ fontSize: 13, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 500, marginTop: 2 }}>
               {pagAtrasado ? "🚨 " : "📆 "}Data Pagamento: {fmtDate(c.previsao_pagamento)}
             </div>}
