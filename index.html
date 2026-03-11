@@ -301,23 +301,33 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       );
     })()}
 
-    {/* Linha 2: Despesas | Resultado Parcial */}
+    {/* Linha 2: Despesas | Manutenções */}
     {(() => {
       var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
-      var resultParcial = recMes - despMesAtual;
+      var manMesAtual = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
+      var resultParcial = recMes - despMesAtual - manMesAtual;
       return (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
+            </div>
+            <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>🔧 Manutenções</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
+            </div>
           </div>
-          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Resultado Parcial</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: resultParcial >= 0 ? C.green : C.red, marginTop: 4 }}>{fmtBRL(resultParcial)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>recebido - despesas</div>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Resultado Parcial</div>
+              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>recebido − despesas − manutenções</div>
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: resultParcial >= 0 ? C.green : C.red }}>{fmtBRL(resultParcial)}</div>
           </div>
-        </div>
+        </>
       );
     })()}
 
@@ -369,7 +379,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           var pago = c.status_pagamento === "pago" || c.status_pagamento === "isento";
           var atrasado = !pago && c.previsao_pagamento && c.previsao_pagamento < hoje;
           var cor = pago ? C.green : atrasado ? C.red : C.orange;
-          var label = pago ? "recebido" : atrasado ? "atrasado" : "pendente";
+          var label = pago ? "pago" : atrasado ? "atrasado" : "pendente";
           return <div key={c.id} onClick={() => setTab("contratos")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < ctsMesLista.length - 1 ? "1px solid " + C.border : "none", cursor: "pointer" }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>No {numCt(c.id)}</div>
@@ -664,7 +674,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       else if (filter === "mes_vigente") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
       else if (filter === "proximo_mes") { if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== proxMes) return false; }
       else if (filter === "a_receber") { if (c.status_pagamento === "pago" || c.status_pagamento === "isento") return false; if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
-      else if (filter === "recebidos_mes") { if (c.status_pagamento !== "pago" || !c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
+      else if (filter === "recebidos_mes") { if (c.status_pagamento !== "pago") return false; if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAtual) return false; }
       else if (filter === "mes_anterior") { var maDate = new Date(); maDate.setMonth(maDate.getMonth() - 1); var mesAnt = maDate.toISOString().slice(0,7); if (!c.previsao_pagamento || c.previsao_pagamento.slice(0,7) !== mesAnt) return false; }
       if (filDe && c.data_inicio && c.data_inicio < filDe) return false;
       if (filAte && c.data_fim && c.data_fim > filAte) return false;
@@ -721,17 +731,23 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       {fil2.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
       {fil2.map((c, i) => {
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
-        var pagAtrasado = (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje;
-        var SPG = { pendente: C.orange, pago: C.green, parcial: C.blue, isento: C.gray };
-        var spLabel = pagAtrasado ? "atrasado" : c.status_pagamento === "pago" ? "pago" : c.status_pagamento === "isento" ? "isento" : c.status_pagamento === "parcial" ? "parcial" : "a receber";
-        var spCor = pagAtrasado ? C.red : SPG[c.status_pagamento || "pendente"];
-        return <div key={c.id} style={{ padding: "14px 0", borderBottom: i < fil2.length - 1 ? "1px solid " + C.border : "none" }}>
+        var isPago     = c.status_pagamento === "pago";
+        var isIsento   = c.status_pagamento === "isento";
+        var isPendente = !isPago && !isIsento;
+        var pagAtrasado = isPendente && c.previsao_pagamento && c.previsao_pagamento < hoje;
+        var spCor   = isPago ? C.green : pagAtrasado ? C.red : isIsento ? C.gray : C.orange;
+        var spLabel = isPago ? "✅ pago" : pagAtrasado ? "🚨 atrasado" : isIsento ? "isento" : "a receber";
+
+        var cardStyle = { padding: "14px 0", borderBottom: i < fil2.length - 1 ? "1px solid " + C.border : "none" };
+        if (isPago) Object.assign(cardStyle, { borderLeft: "4px solid " + C.green, paddingLeft: 12, marginLeft: -4 });
+
+        return <div key={c.id} style={cardStyle}>
           <div style={{ marginBottom: 6 }}>
             <div style={{ fontWeight: 800, fontSize: 15 }}>{cl && cl.nome || "--"}</div>
             <div style={{ fontSize: 13, color: C.sub, marginTop: 1 }}>No {numCt(c.id)} · <span style={{ fontWeight: 800, color: "#1C1C1E" }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}</div>
             <div style={{ fontSize: 14, color: C.sub, marginTop: 2 }}>📅 {fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
             {c.previsao_pagamento && <div style={{ fontSize: 13, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 500, marginTop: 2 }}>
-              {pagAtrasado ? "🚨 " : "📆 "}Data Pagamento: {fmtDate(c.previsao_pagamento)}
+              {pagAtrasado ? "🚨 " : "📆 "}Pagamento: {fmtDate(c.previsao_pagamento)}
             </div>}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -739,16 +755,25 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
               <span style={Badge(spCor)}>{spLabel}</span>
             </div>
-            <div style={{ fontWeight: 800, fontSize: 17, color: C.green }}>{fmtBRL(c.valor_total)}</div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-            {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => concluir(c)}>Concluir</button>}
-            {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
-            {(c.status_pagamento === "pendente" || !c.status_pagamento) && <button style={Ghost(C.sub)} onClick={async () => { await db.patch("contratos", c.id, { status_pagamento: "pago" }); setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x)); toast("Pagamento registrado!"); }}>💰 Pago</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
+            {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
+            {isPendente && <button style={Ghost(C.green)} onClick={async () => {
+              await db.patch("contratos", c.id, { status_pagamento: "pago" });
+              setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x));
+              toast("✅ Pagamento registrado!");
+            }}>💰 Receber</button>}
+            {isPago && <button style={Ghost(C.red)} onClick={async () => {
+              if (!confirm("Reverter pagamento para 'a receber'?")) return;
+              await db.patch("contratos", c.id, { status_pagamento: "pendente" });
+              setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pendente" }) : x));
+              toast("↩ Pagamento revertido");
+            }}>↩ Reverter</button>}
+            {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => concluir(c)}>Encerrar</button>}
             <button style={Ghost(C.sub)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
             <button style={Ghost(C.sub)} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
-            <button style={Ghost(C.sub)} onClick={() => shareWhatsApp(c, cl, ve, empresa)}>WhatsApp</button>
             <button style={Ghost(C.red)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>;
@@ -791,7 +816,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         <Lbl label="Status"><select style={FI} value={form.status || "ativo"} onChange={e => F("status", e.target.value)}><option value="ativo">Ativo</option><option value="concluido">Concluido</option><option value="cancelado">Cancelado</option></select></Lbl>
         <div style={{ display: "flex", gap: 10 }}>
           <Lbl label="Forma de Pagamento" flex={1}><select style={FI} value={form.forma_pagamento || ""} onChange={e => F("forma_pagamento", e.target.value)}><option value="">Selecione...</option><option>Pix</option><option>Dinheiro</option><option>Cartao Debito</option><option>Cartao Credito</option><option>Transferencia</option><option>Boleto</option><option>A Prazo</option></select></Lbl>
-          <Lbl label="Status Pagamento" flex={1}><select style={FI} value={form.status_pagamento || "pendente"} onChange={e => F("status_pagamento", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="parcial">Parcial</option><option value="isento">Isento</option></select></Lbl>
+          <Lbl label="Status Pagamento" flex={1}><select style={FI} value={form.status_pagamento || "pendente"} onChange={e => F("status_pagamento", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="isento">Isento</option></select></Lbl>
         </div>
         <Lbl label="Previsao de Pagamento"><input style={FI} type="date" value={form.previsao_pagamento || ""} onChange={e => F("previsao_pagamento", e.target.value)} /></Lbl>
         <Lbl label="Checklist Vistoria Retirada"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.checklist_retirada || ""} onChange={e => F("checklist_retirada", e.target.value)} placeholder="Ex: Sem arranhoes, tanque cheio, pneus ok..." /></Lbl>
@@ -935,63 +960,177 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
 }
 
 // ── MANUTENCAO ─────────────────────────────────────────────────────────────
-function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast }) {
+function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, despesas, setDespesas, toast }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
   const [edit, setEdit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("todos");
+  const [baixarModal, setBaixarModal] = useState(false);
+  const [baixarItem, setBaixarItem] = useState(null);
+  const [baixarData, setBaixarData] = useState(new Date().toISOString().split("T")[0]);
   const fil = manutencoes.filter(m => filter === "todos" || m.status === filter);
   function getVe(id) { return veiculos.find(v => v.id == id); }
   function F(k, v) { setForm(p => Object.assign({}, p, { [k]: v })); }
+
   async function save() {
     if (!form.veiculo_id || !form.tipo) return toast("Veiculo e Tipo obrigatorios", "error");
     setLoading(true);
     try {
-      if (edit) { const u = await db.patch("manutencao", edit, form); setManutencoes(p => p.map(m => m.id === edit ? Object.assign({}, m, u) : m)); var ns = form.status === "em_andamento" ? "manutencao" : "disponivel"; await db.patch("veiculos", form.veiculo_id, { status: ns }); setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: ns }) : v)); toast("Atualizado!"); }
-      else { const c = await db.post("manutencao", form); setManutencoes(p => [c].concat(p)); await db.patch("veiculos", form.veiculo_id, { status: "manutencao" }); setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: "manutencao" }) : v)); toast("Registrada!"); }
+      if (edit) {
+        const u = await db.patch("manutencao", edit, form);
+        setManutencoes(p => p.map(m => m.id === edit ? Object.assign({}, m, u) : m));
+        var ns = form.status === "em_andamento" ? "manutencao" : "disponivel";
+        await db.patch("veiculos", form.veiculo_id, { status: ns });
+        setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: ns }) : v));
+        toast("Atualizado!");
+      } else {
+        const c = await db.post("manutencao", form);
+        setManutencoes(p => [c].concat(p));
+        await db.patch("veiculos", form.veiculo_id, { status: "manutencao" });
+        setVeiculos(p => p.map(v => v.id == form.veiculo_id ? Object.assign({}, v, { status: "manutencao" }) : v));
+        // Lançar automaticamente como despesa se tiver custo
+        if (parseFloat(form.custo || 0) > 0) {
+          var ve = getVe(form.veiculo_id);
+          var despPayload = {
+            descricao: "Manutenção: " + form.tipo + (ve ? " - " + ve.placa : ""),
+            categoria: "Manutencao",
+            valor: form.custo,
+            data: form.data_entrada || new Date().toISOString().split("T")[0],
+            status: "previsto",
+            recorrente: !!form.recorrente,
+            prazo_recorrencia: form.prazo_recorrencia || null,
+            observacoes: (form.descricao || "") + (form.oficina ? " | Oficina: " + form.oficina : ""),
+            manutencao_id: c.id
+          };
+          var desp = await db.post("despesas", despPayload);
+          setDespesas(p => [desp].concat(p));
+        }
+        toast("Registrada!");
+      }
       setModal(false);
     } catch(e) { toast("Erro: " + e.message, "error"); }
     setLoading(false);
   }
-  async function remove(id) { if (!confirm("Excluir?")) return; await db.del("manutencao", id); setManutencoes(p => p.filter(m => m.id !== id)); toast("Excluido!"); }
+
+  async function remove(id) {
+    if (!confirm("Excluir?")) return;
+    await db.del("manutencao", id);
+    setManutencoes(p => p.filter(m => m.id !== id));
+    // Remove despesa vinculada se existir
+    var despVinc = despesas.filter(d => d.manutencao_id == id);
+    for (var dv of despVinc) { await db.del("despesas", dv.id); }
+    setDespesas(p => p.filter(d => d.manutencao_id != id));
+    toast("Excluido!");
+  }
+
   async function concluir(m) {
     if (!confirm("Concluir e liberar veiculo?")) return;
     var hoje = new Date().toISOString().split("T")[0];
-    await db.patch("manutencao", m.id, { status: "concluida", data_saida: hoje }); await db.patch("veiculos", m.veiculo_id, { status: "disponivel" });
-    setManutencoes(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status: "concluida", data_saida: hoje }) : x)); setVeiculos(p => p.map(v => v.id == m.veiculo_id ? Object.assign({}, v, { status: "disponivel" }) : v));
+    await db.patch("manutencao", m.id, { status: "concluida", data_saida: hoje });
+    await db.patch("veiculos", m.veiculo_id, { status: "disponivel" });
+    setManutencoes(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status: "concluida", data_saida: hoje }) : x));
+    setVeiculos(p => p.map(v => v.id == m.veiculo_id ? Object.assign({}, v, { status: "disponivel" }) : v));
     toast("Concluida! Veiculo liberado");
   }
+
+  async function confirmarBaixar() {
+    if (!baixarItem || !baixarData) return toast("Informe a data de pagamento", "error");
+    try {
+      var ve = getVe(baixarItem.veiculo_id);
+      var despVinc = despesas.find(d => String(d.manutencao_id) === String(baixarItem.id));
+
+      if (despVinc) {
+        // Já existe despesa vinculada: apenas baixar
+        var upd = await db.patch("despesas", despVinc.id, { status: "pago", data_pagamento: baixarData });
+        setDespesas(p => p.map(x => x.id === despVinc.id ? Object.assign({}, x, upd) : x));
+      } else {
+        // Não existe despesa: criar e já marcar como paga
+        var despPayload = {
+          descricao: "Manutenção: " + baixarItem.tipo + (ve ? " - " + ve.placa : ""),
+          categoria: "Manutencao",
+          valor: baixarItem.custo,
+          data: baixarItem.data_entrada || baixarData,
+          status: "pago",
+          data_pagamento: baixarData,
+          observacoes: [(baixarItem.descricao || ""), (baixarItem.oficina ? "Oficina: " + baixarItem.oficina : "")].filter(Boolean).join(" | "),
+          manutencao_id: baixarItem.id
+        };
+        var novaDesp = await db.post("despesas", despPayload);
+        setDespesas(p => [novaDesp].concat(p));
+      }
+
+      // Atualiza status financeiro da manutenção
+      await db.patch("manutencao", baixarItem.id, { status_financeiro: "pago", data_pagamento: baixarData });
+      setManutencoes(p => p.map(x => x.id === baixarItem.id ? Object.assign({}, x, { status_financeiro: "pago", data_pagamento: baixarData }) : x));
+
+      setBaixarModal(false);
+      setBaixarItem(null);
+      toast("Despesa de manutenção baixada! ✅");
+    } catch(e) {
+      toast("Erro ao baixar: " + e.message, "error");
+    }
+  }
+
   const SC = { em_andamento: C.orange, concluida: C.green, aguardando: C.purple, cancelada: C.red };
   const total = fil.reduce((s, m) => s + parseFloat(m.custo || 0), 0);
+  const totalPago = fil.filter(m => m.status_financeiro === "pago").reduce((s, m) => s + parseFloat(m.custo || 0), 0);
+
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div style={{ fontSize: 24, fontWeight: 800 }}>Manutencao</div>
-      <button style={Btn(C.purple)} onClick={() => { setForm({ status: "em_andamento", data_entrada: new Date().toISOString().split("T")[0] }); setEdit(null); setModal(true); }}>+ Manutencao</button>
+      <div>
+        <div style={{ fontSize: 24, fontWeight: 800 }}>Manutenção</div>
+        <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>Custo total: <b style={{ color: C.purple }}>{fmtBRL(total)}</b> · Pago: <b style={{ color: C.red }}>{fmtBRL(totalPago)}</b></div>
+      </div>
+      <button style={Btn(C.purple)} onClick={() => { setForm({ status: "em_andamento", data_entrada: new Date().toISOString().split("T")[0] }); setEdit(null); setModal(true); }}>+ Manutenção</button>
     </div>
     <div style={{ display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", alignItems: "center", paddingBottom: 2 }}>
       {["todos", "em_andamento", "aguardando", "concluida", "cancelada"].map(x => <button key={x} onClick={() => setFilter(x)} style={Object.assign({}, Ghost(filter === x ? C.purple : C.gray), { background: filter === x ? C.purple : "transparent", color: filter === x ? "#fff" : C.gray, fontSize: 13 })}>{x.replace("_", " ")}</button>)}
-      <span style={{ marginLeft: "auto", fontWeight: 700, color: C.purple }}>{fmtBRL(total)}</span>
     </div>
     <div style={CARD}>
-      {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma manutencao</div>}
-      {fil.map((m, i) => { var ve = getVe(m.veiculo_id); return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
+      {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma manutenção</div>}
+      {fil.map((m, i) => { var ve = getVe(m.veiculo_id); var despVinc = despesas.find(d => d.manutencao_id == m.id); var financPago = m.status_financeiro === "pago" || (despVinc && despVinc.status === "pago"); return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div><div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div><div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div><div style={{ fontSize: 12, color: C.sub }}>Entrada: {fmtDate(m.data_entrada)}{m.data_saida && " - Saida: " + fmtDate(m.data_saida)}</div>{m.oficina && <div style={{ fontSize: 12, color: C.sub }}>{m.oficina}</div>}
-          <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
-            {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orcamento</a>}
-            {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota de Servico</a>}
-          </div></div>
-          <div style={{ textAlign: "right" }}>{parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 16, color: C.purple }}>{fmtBRL(m.custo)}</div>}<span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span></div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
+            <div style={{ fontSize: 12, color: C.sub }}>Entrada: {fmtDate(m.data_entrada)}{m.data_saida && " · Saída: " + fmtDate(m.data_saida)}</div>
+            {m.oficina && <div style={{ fontSize: 12, color: C.sub }}>🏪 {m.oficina}</div>}
+            {m.recorrente && <div style={{ fontSize: 11, color: C.orange }}>🔁 Recorrente{m.prazo_recorrencia ? " · Prazo: " + m.prazo_recorrencia + " meses" : ""}</div>}
+            <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
+              {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orçamento</a>}
+              {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota de Serviço</a>}
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            {parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 16, color: financPago ? C.green : C.purple }}>{fmtBRL(m.custo)}</div>}
+            <span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span>
+            {parseFloat(m.custo || 0) > 0 && <div style={{ marginTop: 4 }}><span style={Badge(financPago ? C.green : C.orange)}>{financPago ? "💰 pago" : "⏳ pendente"}</span></div>}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {m.status === "em_andamento" && <button style={Btn(C.green, true)} onClick={() => concluir(m)}>Concluir</button>}
+          {m.status === "em_andamento" && <button style={Btn(C.green, true)} onClick={() => concluir(m)}>✅ Concluir</button>}
+          {parseFloat(m.custo || 0) > 0 && !financPago && <button style={Btn(C.red, true)} onClick={() => { setBaixarItem(m); setBaixarData(new Date().toISOString().split("T")[0]); setBaixarModal(true); }}>💸 Baixar Despesa</button>}
           <button style={Ghost(C.purple)} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
           <button style={Btn(C.red, true)} onClick={() => remove(m.id)}>✕</button>
         </div>
       </div>; })}
     </div>
-    <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar" : "Nova Manutencao"} wide>
+
+    {/* Modal Baixar Despesa */}
+    <Modal open={baixarModal} onClose={() => { setBaixarModal(false); setBaixarItem(null); }} title="Baixar Despesa de Manutenção">
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {baixarItem && <div style={{ background: C.bg, borderRadius: 12, padding: 14 }}>
+          <div style={{ fontWeight: 700 }}>{baixarItem.tipo}</div>
+          <div style={{ fontSize: 13, color: C.sub }}>{getVe(baixarItem.veiculo_id) && getVe(baixarItem.veiculo_id).placa}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.red, marginTop: 6 }}>{fmtBRL(baixarItem.custo)}</div>
+        </div>}
+        <Lbl label="Data do Pagamento *"><input style={FI} type="date" value={baixarData} onChange={e => setBaixarData(e.target.value)} /></Lbl>
+        <button style={Btn(C.red)} onClick={confirmarBaixar}>💸 Confirmar Pagamento</button>
+      </div>
+    </Modal>
+
+    <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar Manutenção" : "Nova Manutenção"} wide>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Lbl label="Veiculo *"><select style={FI} value={form.veiculo_id || ""} onChange={e => F("veiculo_id", e.target.value)}><option value="">Selecione...</option>{veiculos.map(v => <option key={v.id} value={v.id}>{v.placa} - {v.marca} {v.modelo}</option>)}</select></Lbl>
         <div style={{ display: "flex", gap: 10 }}>
@@ -1006,6 +1145,17 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, toast 
           <Lbl label="Oficina" flex={2}><input style={FI} value={form.oficina || ""} onChange={e => F("oficina", e.target.value)} /></Lbl>
           <Lbl label="Custo (R$)" flex={1}><input style={FI} type="number" step="0.01" value={form.custo || ""} onChange={e => F("custo", e.target.value)} /></Lbl>
         </div>
+        {/* Recorrente */}
+        <div onClick={() => F("recorrente", !form.recorrente)} style={{ display: "flex", alignItems: "center", gap: 10, background: form.recorrente ? C.orange + "15" : C.border + "40", borderRadius: 12, padding: "12px 14px", cursor: "pointer", border: "1.5px solid " + (form.recorrente ? C.orange : C.border) }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, background: form.recorrente ? C.orange : "#fff", border: "2px solid " + (form.recorrente ? C.orange : "#C7C7CC"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {form.recorrente && <span style={{ color: "#fff", fontSize: 14, fontWeight: 900 }}>✓</span>}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: form.recorrente ? C.orange : "#1C1C1E" }}>🔁 Manutenção recorrente</div>
+            <div style={{ fontSize: 12, color: C.sub }}>Lançar despesa automaticamente nos próximos meses</div>
+          </div>
+        </div>
+        {form.recorrente && <Lbl label="Prazo da Recorrência (meses)"><input style={FI} type="number" min="1" max="60" value={form.prazo_recorrencia || ""} onChange={e => F("prazo_recorrencia", e.target.value)} placeholder="Ex: 6 = a cada 6 meses" /></Lbl>}
         <Lbl label="Descricao / Pecas"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 80 })} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
         <UploadField label="Orcamento (PDF/Foto)" value={form.orcamento_url || ""} onChange={v => F("orcamento_url", v)} pasta="manutencao" nome={"orc_" + (form.veiculo_id || "0") + "_" + Date.now()} />
         <UploadField label="Nota de Servico (PDF/Foto)" value={form.nota_servico_url || ""} onChange={v => F("nota_servico_url", v)} pasta="manutencao" nome={"nota_" + (form.veiculo_id || "0") + "_" + Date.now()} />
@@ -1030,10 +1180,19 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
 
   useState(() => { db.get("orcamento_pessoal").then(d => { setItens(d || []); setLoading(false); }).catch(() => setLoading(false)); }, []);
 
-  // Itens do mês: próprios do mês OU recorrentes de meses anteriores
-  var itensMes = itens.filter(it => it.mes === filtroMes || (it.recorrente && it.mes && it.mes <= filtroMes && it.mes !== filtroMes));
+  // Filtra itens visíveis no mês selecionado
+  function itemVisivelNoMes(it, mes) {
+    if (it.mes === mes) return true; // item do próprio mês
+    if (!it.recorrente || !it.mes || it.mes >= mes) return false; // não recorrente ou futuro
+    if (!it.prazo_recorrencia) return true; // recorrente sem prazo = infinito
+    var inicio = new Date(it.mes + "-01");
+    var fim = new Date(mes + "-01");
+    var diff = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
+    return diff <= parseInt(it.prazo_recorrencia);
+  }
+
   var itensProprios = itens.filter(it => it.mes === filtroMes);
-  var itensRecorrentes = itens.filter(it => it.recorrente && it.mes && it.mes < filtroMes);
+  var itensRecorrentes = itens.filter(it => it.recorrente && it.mes && it.mes < filtroMes && itemVisivelNoMes(it, filtroMes));
   var todosVisiveis = itensProprios.concat(itensRecorrentes);
 
   // KPIs
@@ -1056,7 +1215,11 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
     if (!form.descricao || !form.valor) return toast("Descricao e valor obrigatorios", "error");
     setSaving(true);
     try {
-      var payload = Object.assign({}, form, { mes: filtroMes, recorrente: !!form.recorrente });
+      var payload = Object.assign({}, form, {
+        mes: filtroMes,
+        recorrente: !!form.recorrente,
+        prazo_recorrencia: form.recorrente ? (form.prazo_recorrencia || null) : null
+      });
       if (edit) { const u = await db.patch("orcamento_pessoal", edit, payload); setItens(p => p.map(it => it.id === edit ? Object.assign({}, it, u) : it)); toast("Atualizado!"); }
       else { const c = await db.post("orcamento_pessoal", payload); setItens(p => [c].concat(p)); toast("Adicionado!"); }
       setModal(false);
@@ -1070,10 +1233,10 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
     return <div style={{ padding: "12px 0", borderBottom: i < total - 1 ? "1px solid " + C.border : "none" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{it.descricao}</div>
-            {isRecorrente && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁 recorrente</span>}
-            {it.recorrente && !isRecorrente && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁</span>}
+            {isRecorrente && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁 recorrente{it.prazo_recorrencia ? " · " + it.prazo_recorrencia + "m" : ""}</span>}
+            {it.recorrente && !isRecorrente && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁{it.prazo_recorrencia ? " " + it.prazo_recorrencia + "m" : ""}</span>}
           </div>
           <div style={{ fontSize: 12, color: C.sub }}>{it.categoria}</div>
           <div style={{ fontSize: 12, color: C.sub }}>
@@ -1083,13 +1246,14 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontWeight: 700, color: it.tipo === "receita" ? C.green : C.red }}>{it.tipo === "receita" ? "+" : "-"}{fmtBRL(it.valor)}</div>
-          <span style={Badge(it.status === "pago" || it.status === "recebido" ? (it.tipo === "receita" ? C.green : C.red) : C.orange)}>
-            {it.status === "pago" || it.status === "recebido" ? (it.tipo === "receita" ? "recebido" : "pago") : "previsto"}
+          {/* Recorrentes de outros meses sempre aparecem como "previsto" neste mês */}
+          <span style={Badge(!isRecorrente && (it.status === "pago" || it.status === "recebido") ? (it.tipo === "receita" ? C.green : C.red) : C.orange)}>
+            {!isRecorrente && (it.status === "pago" || it.status === "recebido") ? (it.tipo === "receita" ? "recebido" : "pago") : "previsto"}
           </span>
         </div>
       </div>
       <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
-        {it.status !== "pago" && it.status !== "recebido" && <button style={Ghost(it.tipo === "receita" ? C.green : C.red)} onClick={async () => {
+        {!isRecorrente && it.status !== "pago" && it.status !== "recebido" && <button style={Ghost(it.tipo === "receita" ? C.green : C.red)} onClick={async () => {
           var dt = prompt("Data (" + (it.tipo === "receita" ? "recebimento" : "pagamento") + "):", new Date().toISOString().split("T")[0]);
           if (!dt) return;
           var novoStatus = it.tipo === "receita" ? "recebido" : "pago";
@@ -1097,7 +1261,7 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
           setItens(p => p.map(x => x.id === it.id ? Object.assign({}, x, upd) : x));
           toast("Baixado!");
         }}>{it.tipo === "receita" ? "✅ Receber" : "💸 Baixar"}</button>}
-        {(it.status === "pago" || it.status === "recebido") && <button style={Ghost(C.sub)} onClick={async () => {
+        {!isRecorrente && (it.status === "pago" || it.status === "recebido") && <button style={Ghost(C.sub)} onClick={async () => {
           var upd = await db.patch("orcamento_pessoal", it.id, { status: "previsto", data_pagamento: null });
           setItens(p => p.map(x => x.id === it.id ? Object.assign({}, x, upd) : x));
           toast("Estornado!");
@@ -1219,10 +1383,11 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
             {form.recorrente && <span style={{ color: "#fff", fontSize: 14, fontWeight: 900 }}>✓</span>}
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: form.recorrente ? C.purple : "#1C1C1E" }}>🔁 Despesa recorrente</div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: form.recorrente ? C.purple : "#1C1C1E" }}>🔁 Lançamento recorrente</div>
             <div style={{ fontSize: 12, color: C.sub }}>Aparece automaticamente nos próximos meses</div>
           </div>
         </div>
+        {form.recorrente && <Lbl label="Prazo da Recorrência (meses)"><input style={FI} type="number" min="1" max="60" value={form.prazo_recorrencia || ""} onChange={e => F("prazo_recorrencia", e.target.value)} placeholder="Vazio = sem prazo (indefinido)" /></Lbl>}
         <Lbl label="Observações"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
         <button style={Btn(C.purple)} onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</button>
       </div>
@@ -1239,16 +1404,46 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState("resumo");
   const [filtroMes, setFiltroMes] = useState(new Date().toISOString().slice(0, 7));
+  const [filtroResumoMes, setFiltroResumoMes] = useState(new Date().toISOString().slice(0, 7));
   function F(k, v) { setForm(p => Object.assign({}, p, { [k]: v })); }
 
   const hoje = new Date().toISOString().split("T")[0];
+
+  // Filtrar despesas pelo mês selecionado (incluindo recorrentes com prazo válido)
+  function despesaVisivelNoMes(d, mes) {
+    var dataMes = (d.data || "").slice(0, 7);
+    if (dataMes === mes) return true;
+    if (d.recorrente && dataMes && dataMes < mes) {
+      // Verificar se ainda está dentro do prazo de recorrência
+      if (!d.prazo_recorrencia) return true; // sem prazo = infinito
+      var inicio = new Date(dataMes + "-01");
+      var fim = new Date(mes + "-01");
+      var mesesDiff = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
+      return mesesDiff <= parseInt(d.prazo_recorrencia);
+    }
+    return false;
+  }
+
+  function receitaVisivelNoMes(r, mes) {
+    var dataMes = (r.data || "").slice(0, 7);
+    if (dataMes === mes) return true;
+    if (r.recorrente && dataMes && dataMes < mes) {
+      if (!r.prazo_recorrencia) return true;
+      var inicio = new Date(dataMes + "-01");
+      var fim = new Date(mes + "-01");
+      var mesesDiff = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
+      return mesesDiff <= parseInt(r.prazo_recorrencia);
+    }
+    return false;
+  }
 
   async function saveDespesa() {
     if (!form.descricao || !form.valor || !form.data) return toast("Descricao, valor e data obrigatorios", "error");
     setLoading(true);
     try {
-      if (edit) { const u = await db.patch("despesas", edit, form); setDespesas(p => p.map(d => d.id === edit ? Object.assign({}, d, u) : d)); toast("Atualizado!"); }
-      else { const c = await db.post("despesas", form); setDespesas(p => [c].concat(p)); toast("Registrado!"); }
+      var payload = Object.assign({}, form, { prazo_recorrencia: form.recorrente ? (form.prazo_recorrencia || null) : null });
+      if (edit) { const u = await db.patch("despesas", edit, payload); setDespesas(p => p.map(d => d.id === edit ? Object.assign({}, d, u) : d)); toast("Atualizado!"); }
+      else { const c = await db.post("despesas", payload); setDespesas(p => [c].concat(p)); toast("Registrado!"); }
       setModal(false);
     } catch(e) { toast("Erro: " + e.message, "error"); }
     setLoading(false);
@@ -1257,83 +1452,69 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
     if (!form.descricao || !form.valor || !form.data) return toast("Descricao, valor e data obrigatorios", "error");
     setLoading(true);
     try {
-      if (edit) { const u = await db.patch("receitas", edit, form); setReceitas(p => p.map(r => r.id === edit ? Object.assign({}, r, u) : r)); toast("Atualizado!"); }
-      else { const c = await db.post("receitas", form); setReceitas(p => [c].concat(p)); toast("Registrado!"); }
-      setModal(false);
-    } catch(e) { toast("Erro: " + e.message, "error"); }
-    setLoading(false);
-  }
-  async function saveConta() {
-    if (!form.descricao || !form.valor || !form.vencimento) return toast("Descricao, valor e vencimento obrigatorios", "error");
-    setLoading(true);
-    try {
-      if (edit) { const u = await db.patch("contas", edit, form); setContas(p => p.map(c => c.id === edit ? Object.assign({}, c, u) : c)); toast("Atualizado!"); }
-      else { const c = await db.post("contas", form); setContas(p => [c].concat(p)); toast("Registrado!"); }
+      var payload = Object.assign({}, form, { prazo_recorrencia: form.recorrente ? (form.prazo_recorrencia || null) : null });
+      if (edit) { const u = await db.patch("receitas", edit, payload); setReceitas(p => p.map(r => r.id === edit ? Object.assign({}, r, u) : r)); toast("Atualizado!"); }
+      else { const c = await db.post("receitas", payload); setReceitas(p => [c].concat(p)); toast("Registrado!"); }
       setModal(false);
     } catch(e) { toast("Erro: " + e.message, "error"); }
     setLoading(false);
   }
   async function removeDespesa(id) { if (!confirm("Excluir?")) return; await db.del("despesas", id); setDespesas(p => p.filter(d => d.id !== id)); toast("Excluido!"); }
   async function removeReceita(id) { if (!confirm("Excluir?")) return; await db.del("receitas", id); setReceitas(p => p.filter(r => r.id !== id)); toast("Excluido!"); }
-  async function removeConta(id) { if (!confirm("Excluir?")) return; await db.del("contas", id); setContas(p => p.filter(c => c.id !== id)); toast("Excluido!"); }
-  async function pagarConta(c) { await db.patch("contas", c.id, { status: "pago" }); setContas(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status: "pago" }) : x)); toast("Conta paga!"); }
 
-  var receitaContratos = contratos.filter(c => c.status === "concluido").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+  // Totais gerais acumulados
+  var receitaContratos = contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
   var receitaManual = receitas.reduce((s, r) => s + parseFloat(r.valor || 0), 0);
   var totalReceita = receitaContratos + receitaManual;
   var totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
   var totalMan = manutencoes.reduce((s, m) => s + parseFloat(m.custo || 0), 0);
-  var totalMultasPagas = multas.filter(m => m.status === "pago").reduce((s, m) => s + parseFloat(m.valor || 0), 0);
   var lucro = totalReceita - totalDesp - totalMan;
-  var contasPagar = contas.filter(c => c.tipo === "pagar" || !c.tipo);
-  var contasPendentes = contasPagar.filter(c => c.status === "pendente");
-  var contasVencidas = contasPendentes.filter(c => c.vencimento && c.vencimento < hoje);
-  var totalPagar = contasPendentes.reduce((s, c) => s + parseFloat(c.valor || 0), 0);
 
-  var despFiltradas = despesas.filter(d => (d.data || "").slice(0, 7) === filtroMes || (d.recorrente && (d.data || "").slice(0, 7) < filtroMes));
-  var recFiltradas = receitas.filter(r => (r.data || "").slice(0, 7) === filtroMes);
+  // Filtros por mês (abas despesas/receitas)
+  var despFiltradas = despesas.filter(d => despesaVisivelNoMes(d, filtroMes));
+  var recFiltradas = receitas.filter(r => receitaVisivelNoMes(r, filtroMes));
 
-  var desByMes = {}; despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); });
-  var recByMes = {}; contratos.filter(c => c.status === "concluido").forEach(function(c) { var mes = (c.data_fim || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(c.valor_total || 0); });
-  receitas.forEach(function(r) { var mes = (r.data || "").slice(0, 7); if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(r.valor || 0); });
-  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)))).sort().reverse().slice(0, 12);
+  // Fluxo de caixa por mês
+  var desByMes = {}; despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (mes) { if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); } });
+  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
+  var recByMes = {};
+  contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").forEach(function(c) {
+    var mes = (c.previsao_pagamento || c.data_fim || "").slice(0, 7);
+    if (mes) { if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(c.valor_total || 0); }
+  });
+  receitas.forEach(function(r) { var mes = (r.data || "").slice(0, 7); if (mes) { if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(r.valor || 0); } });
+  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)).concat(Object.keys(manByMes)))).filter(Boolean).sort().reverse().slice(0, 12);
 
-  var mesAtualFin = new Date().toISOString().slice(0, 7);
-  var [filtroResumoMes, setFiltroResumoMes] = useState(mesAtualFin);
-
-  // Receitas do mês selecionado (contratos com previsao_pagamento no mês)
+  // Receitas do mês selecionado (resumo)
   var recMesContratos = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === filtroResumoMes);
   var recMesPrevista = recMesContratos.reduce((s,c) => s+parseFloat(c.valor_total||0),0);
   var recMesRecebida = recMesContratos.filter(c => c.status_pagamento === "pago").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
   var recMesPendente = recMesContratos.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
   var recMesManual = receitas.filter(r => (r.data||"").slice(0,7) === filtroResumoMes).reduce((s,r) => s+parseFloat(r.valor||0),0);
 
-  // Despesas do mês selecionado
-  var despMes = despesas.filter(d => (d.data||"").slice(0,7) === filtroResumoMes).reduce((s,d) => s+parseFloat(d.valor||0),0);
-  var contasMes = contas.filter(c => c.vencimento && c.vencimento.slice(0,7) === filtroResumoMes);
-  var contasMesPrevista = contasMes.reduce((s,c) => s+parseFloat(c.valor||0),0);
-  var contasMesPaga = contasMes.filter(c => c.status === "pago").reduce((s,c) => s+parseFloat(c.valor||0),0);
-  var contasMesPendente = contasMes.filter(c => c.status === "pendente").reduce((s,c) => s+parseFloat(c.valor||0),0);
+  // Despesas do mês selecionado (resumo) - SEM contas, tudo como despesas
+  var despMes = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes)).reduce((s,d) => s+parseFloat(d.valor||0),0);
+  var despMesPago = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status === "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
+  var despMesPendente = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status !== "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
   var manMes = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes).reduce((s,m) => s+parseFloat(m.custo||0),0);
-  var totalDespMes = despMes + contasMesPaga + manMes;
+  var manMesPago = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes && m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
+  var totalDespMes = despMesPago + manMesPago;
 
   var saldoMes = (recMesRecebida + recMesManual) - totalDespMes;
-  var saldoProjetado = (recMesPrevista + recMesManual) - (contasMesPrevista + despMes + manMes);
+  var saldoProjetado = (recMesPrevista + recMesManual) - (despMes + manMes);
 
   var CATS_DESP = ["Combustivel", "Limpeza", "Impostos", "Salarios", "Aluguel", "Manutencao", "Marketing", "Seguros", "Outros"];
   var CATS_REC = ["Locacao", "Servico", "Multa Cobrada", "Deposito", "Outros"];
-  var CATS_CONTA = ["Fornecedor", "Imposto", "Aluguel", "Salario", "Seguro", "Servico", "Outros"];
 
-  function openDesp(d) { setForm(d ? Object.assign({}, d) : { data: new Date().toISOString().split("T")[0], categoria: "Outros" }); setEdit(d ? d.id : null); setModalTipo("despesa"); setModal(true); }
-  function openRec(r) { setForm(r ? Object.assign({}, r) : { data: new Date().toISOString().split("T")[0], categoria: "Locacao", forma_pagamento: "Pix" }); setEdit(r ? r.id : null); setModalTipo("receita"); setModal(true); }
-  function openConta(c) { setForm(c ? Object.assign({}, c) : { vencimento: "", tipo: "pagar", status: "pendente", categoria: "Fornecedor" }); setEdit(c ? c.id : null); setModalTipo("conta"); setModal(true); }
+  function openDesp(d) { setForm(d ? Object.assign({}, d) : { data: new Date().toISOString().split("T")[0], categoria: "Outros", status: "previsto" }); setEdit(d ? d.id : null); setModalTipo("despesa"); setModal(true); }
+  function openRec(r) { setForm(r ? Object.assign({}, r) : { data: new Date().toISOString().split("T")[0], categoria: "Locacao", forma_pagamento: "Pix", status: "previsto" }); setEdit(r ? r.id : null); setModalTipo("receita"); setModal(true); }
 
   var SC_CONTA = { pendente: C.orange, pago: C.green, vencido: C.red, cancelado: C.gray };
 
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     <div style={{ fontSize: 24, fontWeight: 800 }}>Financeiro</div>
     <div style={{ display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-      {[["resumo","📊"],["receitas","💰"],["despesas","📉"],["contas","📅"],["fluxo","📈"],["pessoal","🏠"]].map(([x, ic]) =>
+      {[["resumo","📊"],["receitas","💰"],["despesas","📉"],["fluxo","📈"],["pessoal","🏠"]].map(([x, ic]) =>
         <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{ic} {x === "pessoal" ? "Orç. Pessoal" : x}</button>
       )}
     </div>
@@ -1363,14 +1544,15 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       <div style={CARD}>
         <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Despesas do Mês</div>
         {[
-          { label: "Contas previstas", val: contasMesPrevista, color: C.sub },
-          { label: "✅ Contas pagas", val: contasMesPaga, color: C.red },
-          { label: "⏳ Contas a pagar", val: contasMesPendente, color: C.orange },
-          { label: "Despesas lançadas", val: despMes, color: C.red },
-          { label: "Manutenções", val: manMes, color: C.purple },
+          { label: "Despesas previstas", val: despMes, color: C.sub },
+          { label: "✅ Despesas pagas", val: despMesPago, color: C.red },
+          { label: "⏳ A pagar", val: despMesPendente, color: C.orange },
+          { label: "🔧 Manutenções previstas", val: manMes, color: C.sub },
+          { label: "✅ Manutenções pagas", val: manMesPago, color: C.purple },
+          { label: "⏳ Manutenções a pagar", val: manMes - manMesPago, color: C.orange },
           { label: "Total saídas realizadas", val: totalDespMes, color: C.red, bold: true },
         ].map((row, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 5 ? "1px solid " + C.border : "none" }}>
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 6 ? "1px solid " + C.border : "none" }}>
             <span style={{ fontWeight: row.bold ? 800 : 400, fontSize: row.bold ? 15 : 13 }}>{row.label}</span>
             <span style={{ fontWeight: 800, color: row.color }}>{fmtBRL(row.val)}</span>
           </div>
@@ -1427,11 +1609,16 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       </div>
       <div style={CARD}>
         {recFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma receita neste período</div>}
-        {recFiltradas.map((r, i) => (
-          <div key={r.id} style={{ padding: "12px 0", borderBottom: i < recFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
+        {recFiltradas.map((r, i) => {
+          var isRec = (r.data||"").slice(0,7) !== filtroMes && r.recorrente;
+          return <div key={r.id} style={{ padding: "12px 0", borderBottom: i < recFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ fontWeight: 600 }}>{r.descricao}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <div style={{ fontWeight: 600 }}>{r.descricao}</div>
+                  {r.recorrente && <span style={{ fontSize: 10, background: C.green + "20", color: C.green, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁{r.prazo_recorrencia ? " " + r.prazo_recorrencia + "m" : ""}</span>}
+                  {isRec && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>recorrente</span>}
+                </div>
                 <div style={{ fontSize: 12, color: C.sub }}>{r.categoria}{r.forma_pagamento && " · " + r.forma_pagamento}</div>
                 <div style={{ fontSize: 12, color: C.sub }}>Previsão: {fmtDate(r.data)}{r.data_pagamento && <span style={{ color: C.green }}> · Recebido: {fmtDate(r.data_pagamento)}</span>}</div>
                 {r.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{r.observacoes}</div>}
@@ -1442,23 +1629,23 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
-              {r.status !== "recebido" && <button style={Ghost(C.green)} onClick={async () => {
+              {r.status !== "recebido" && !isRec && <button style={Ghost(C.green)} onClick={async () => {
                 var dt = prompt("Data do recebimento (AAAA-MM-DD):", new Date().toISOString().split("T")[0]);
                 if (!dt) return;
                 var upd = await db.patch("receitas", r.id, { status: "recebido", data_pagamento: dt });
                 setReceitas(p => p.map(x => x.id === r.id ? Object.assign({}, x, upd) : x));
                 toast("Receita baixada!");
               }}>✅ Baixar</button>}
-              {r.status === "recebido" && <button style={Ghost(C.sub)} onClick={async () => {
+              {r.status === "recebido" && !isRec && <button style={Ghost(C.sub)} onClick={async () => {
                 var upd = await db.patch("receitas", r.id, { status: "previsto", data_pagamento: null });
                 setReceitas(p => p.map(x => x.id === r.id ? Object.assign({}, x, upd) : x));
                 toast("Estornado!");
               }}>↩ Estornar</button>}
-              <button style={Ghost()} onClick={() => openRec(r)}>Editar</button>
-              <button style={Ghost(C.red)} onClick={() => removeReceita(r.id)}>✕</button>
+              {!isRec && <button style={Ghost()} onClick={() => openRec(r)}>Editar</button>}
+              {!isRec && <button style={Ghost(C.red)} onClick={() => removeReceita(r.id)}>✕</button>}
             </div>
-          </div>
-        ))}
+          </div>;
+        })}
       </div>
     </div>}
 
@@ -1482,13 +1669,16 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       </div>
       <div style={CARD}>
         {despFiltradas.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma despesa neste período</div>}
-        {despFiltradas.map((d, i) => (
-          <div key={d.id} style={{ padding: "12px 0", borderBottom: i < despFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
+        {despFiltradas.map((d, i) => {
+          var isRec = (d.data||"").slice(0,7) !== filtroMes && d.recorrente;
+          return <div key={d.id} style={{ padding: "12px 0", borderBottom: i < despFiltradas.length - 1 ? "1px solid " + C.border : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 600 }}>{d.descricao}</div>
-                  {d.recorrente && <span style={{ fontSize: 10, background: C.orange + "20", color: C.orange, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁</span>}
+                  {d.recorrente && <span style={{ fontSize: 10, background: C.orange + "20", color: C.orange, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔁{d.prazo_recorrencia ? " " + d.prazo_recorrencia + "m" : ""}</span>}
+                  {isRec && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>recorrente</span>}
+                  {d.categoria === "Manutencao" && <span style={{ fontSize: 10, background: C.purple + "20", color: C.purple, borderRadius: 6, padding: "2px 6px", fontWeight: 700 }}>🔧</span>}
                 </div>
                 <div style={{ fontSize: 12, color: C.sub }}>{d.categoria}</div>
                 <div style={{ fontSize: 12, color: C.sub }}>Previsão: {fmtDate(d.data)}{d.data_pagamento && <span style={{ color: C.red }}> · Pago: {fmtDate(d.data_pagamento)}</span>}</div>
@@ -1500,59 +1690,20 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch" }}>
-              {d.status !== "pago" && <button style={Ghost(C.red)} onClick={async () => {
+              {d.status !== "pago" && !isRec && <button style={Ghost(C.red)} onClick={async () => {
                 var dt = prompt("Data do pagamento (AAAA-MM-DD):", new Date().toISOString().split("T")[0]);
                 if (!dt) return;
                 var upd = await db.patch("despesas", d.id, { status: "pago", data_pagamento: dt });
                 setDespesas(p => p.map(x => x.id === d.id ? Object.assign({}, x, upd) : x));
                 toast("Despesa baixada!");
               }}>💸 Baixar</button>}
-              {d.status === "pago" && <button style={Ghost(C.sub)} onClick={async () => {
+              {d.status === "pago" && !isRec && <button style={Ghost(C.sub)} onClick={async () => {
                 var upd = await db.patch("despesas", d.id, { status: "previsto", data_pagamento: null });
                 setDespesas(p => p.map(x => x.id === d.id ? Object.assign({}, x, upd) : x));
                 toast("Estornado!");
               }}>↩ Estornar</button>}
-              <button style={Ghost()} onClick={() => openDesp(d)}>Editar</button>
-              <button style={Ghost(C.red)} onClick={() => removeDespesa(d.id)}>✕</button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>}
-
-    {tab === "contas" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div>
-          <span style={{ fontWeight: 700, color: C.orange }}>{fmtBRL(totalPagar)} pendentes</span>
-          {contasVencidas.length > 0 && <span style={{ marginLeft: 12, fontWeight: 700, color: C.red }}>{contasVencidas.length} vencida(s)</span>}
-        </div>
-        <button style={Btn(C.orange)} onClick={() => openConta(null)}>+ Conta</button>
-      </div>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-        {["todos","pendente","pago"].map(x => (
-          <button key={x} onClick={() => setFiltroMes(x === filtroMes ? "" : x)} style={Object.assign({}, Ghost(filtroMes === x ? C.blue : C.gray), { background: filtroMes === x ? C.blue : "transparent", color: filtroMes === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{x}</button>
-        ))}
-      </div>
-      <div style={CARD}>
-        {contas.filter(c => filtroMes === "pendente" || filtroMes === "pago" ? c.status === filtroMes : true).length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma conta</div>}
-        {contas.filter(c => filtroMes === "pendente" || filtroMes === "pago" ? c.status === filtroMes : true).map((c, i, arr) => {
-          var vencida = c.status === "pendente" && c.vencimento && c.vencimento < hoje;
-          return <div key={c.id} style={{ padding: "11px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>{c.descricao} {vencida && <span style={{ color: C.red, fontSize: 11, fontWeight: 800 }}>VENCIDA</span>}</div>
-                <div style={{ fontSize: 12, color: C.sub }}>{c.categoria} · Venc: <span style={{ color: vencida ? C.red : C.sub, fontWeight: vencida ? 700 : 400 }}>{c.vencimento || "--"}</span></div>
-                {c.observacoes && <div style={{ fontSize: 12, color: C.sub }}>{c.observacoes}</div>}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: vencida ? C.red : C.orange }}>{fmtBRL(c.valor)}</div>
-                <span style={Badge(SC_CONTA[vencida ? "vencido" : c.status] || C.gray)}>{vencida ? "vencida" : c.status}</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-              {c.status === "pendente" && <button style={Btn(C.green, true)} onClick={() => pagarConta(c)}>Marcar Pago</button>}
-              <button style={Ghost()} onClick={() => openConta(c)}>Editar</button>
-              <button style={Btn(C.red, true)} onClick={() => removeConta(c.id)}>✕</button>
+              {!isRec && <button style={Ghost()} onClick={() => openDesp(d)}>Editar</button>}
+              {!isRec && <button style={Ghost(C.red)} onClick={() => removeDespesa(d.id)}>✕</button>}
             </div>
           </div>;
         })}
@@ -1565,17 +1716,19 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead><tr style={{ background: C.bg }}>
-            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: C.sub }}>Mes</th>
+            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 700, color: C.sub }}>Mês</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.green }}>Receitas</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>Despesas</th>
+            <th style={{ padding: "8px 12px", textAlign: "right", color: C.purple }}>Manutenção</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.blue }}>Saldo</th>
           </tr></thead>
           <tbody>{meses.map(mes => {
-            var rec = recByMes[mes] || 0; var desp = desByMes[mes] || 0; var saldo = rec - desp;
+            var rec = recByMes[mes] || 0; var desp = desByMes[mes] || 0; var man = manByMes[mes] || 0; var saldo = rec - desp - man;
             return <tr key={mes} style={{ borderTop: "1px solid " + C.border }}>
               <td style={{ padding: "8px 12px", fontWeight: 600 }}>{mes}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: C.green, fontWeight: 600 }}>{fmtBRL(rec)}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: C.red, fontWeight: 600 }}>{fmtBRL(desp)}</td>
+              <td style={{ padding: "8px 12px", textAlign: "right", color: C.purple, fontWeight: 600 }}>{fmtBRL(man)}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: saldo >= 0 ? C.green : C.red, fontWeight: 800 }}>{fmtBRL(saldo)}</td>
             </tr>;
           })}</tbody>
@@ -1585,7 +1738,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
 
     {tab === "pessoal" && <OrcamentoPessoal contratos={contratos} despesas={despesas} receitas={receitas} toast={toast} />}
 
-    <Modal open={modal} onClose={() => setModal(false)} title={modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : modalTipo === "receita" ? (edit ? "Editar Receita" : "Nova Receita") : (edit ? "Editar Conta" : "Nova Conta")}>
+    <Modal open={modal} onClose={() => setModal(false)} title={modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : (edit ? "Editar Receita" : "Nova Receita")}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {modalTipo === "despesa" && <>
           <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
@@ -1603,6 +1756,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
               <div style={{ fontSize: 12, color: C.sub }}>Aparece automaticamente nos próximos meses</div>
             </div>
           </div>
+          {form.recorrente && <Lbl label="Prazo da Recorrência (meses)"><input style={FI} type="number" min="1" max="60" value={form.prazo_recorrencia || ""} onChange={e => F("prazo_recorrencia", e.target.value)} placeholder="Vazio = sem prazo (indefinido)" /></Lbl>}
           <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
           <button style={Btn(C.red)} onClick={saveDespesa} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
         </>}
@@ -1616,21 +1770,18 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
             <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Locacao"} onChange={e => F("categoria", e.target.value)}>{CATS_REC.map(c => <option key={c}>{c}</option>)}</select></Lbl>
             <Lbl label="Forma de Pagamento" flex={1}><select style={FI} value={form.forma_pagamento || "Pix"} onChange={e => F("forma_pagamento", e.target.value)}><option>Pix</option><option>Dinheiro</option><option>Cartao Debito</option><option>Cartao Credito</option><option>Transferencia</option><option>Boleto</option></select></Lbl>
           </div>
+          <div onClick={() => F("recorrente", !form.recorrente)} style={{ display: "flex", alignItems: "center", gap: 10, background: form.recorrente ? C.green + "15" : C.border + "40", borderRadius: 12, padding: "12px 14px", cursor: "pointer", border: "1.5px solid " + (form.recorrente ? C.green : C.border) }}>
+            <div style={{ width: 22, height: 22, borderRadius: 6, background: form.recorrente ? C.green : "#fff", border: "2px solid " + (form.recorrente ? C.green : "#C7C7CC"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              {form.recorrente && <span style={{ color: "#fff", fontSize: 14, fontWeight: 900 }}>✓</span>}
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: form.recorrente ? C.green : "#1C1C1E" }}>🔁 Receita recorrente</div>
+              <div style={{ fontSize: 12, color: C.sub }}>Aparece automaticamente nos próximos meses</div>
+            </div>
+          </div>
+          {form.recorrente && <Lbl label="Prazo da Recorrência (meses)"><input style={FI} type="number" min="1" max="60" value={form.prazo_recorrencia || ""} onChange={e => F("prazo_recorrencia", e.target.value)} placeholder="Vazio = sem prazo (indefinido)" /></Lbl>}
           <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
           <button style={Btn(C.green)} onClick={saveReceita} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
-        </>}
-        {modalTipo === "conta" && <>
-          <Lbl label="Descricao *"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} placeholder="Ex: Aluguel do galpao, Seguro frota..." /></Lbl>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Lbl label="Valor *" flex={1}><input style={FI} type="number" step="0.01" value={form.valor || ""} onChange={e => F("valor", e.target.value)} /></Lbl>
-            <Lbl label="Vencimento *" flex={1}><input style={FI} type="date" value={form.vencimento || ""} onChange={e => F("vencimento", e.target.value)} /></Lbl>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Lbl label="Categoria" flex={1}><select style={FI} value={form.categoria || "Fornecedor"} onChange={e => F("categoria", e.target.value)}>{CATS_CONTA.map(c => <option key={c}>{c}</option>)}</select></Lbl>
-            <Lbl label="Status" flex={1}><select style={FI} value={form.status || "pendente"} onChange={e => F("status", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="cancelado">Cancelado</option></select></Lbl>
-          </div>
-          <Lbl label="Observacoes"><input style={FI} value={form.observacoes || ""} onChange={e => F("observacoes", e.target.value)} /></Lbl>
-          <button style={Btn(C.orange)} onClick={saveConta} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
         </>}
       </div>
     </Modal>
@@ -1839,7 +1990,17 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table orcamento_pessoal add column if not exists data date;<br/>
         alter table orcamento_pessoal add column if not exists data_pagamento date;<br/>
         alter table despesas add column if not exists recorrente boolean default false;<br/>
-        alter table orcamento_pessoal add column if not exists recorrente boolean default false;
+        alter table orcamento_pessoal add column if not exists recorrente boolean default false;<br/>
+        -- Novas colunas para prazo de recorrência e integração financeira:<br/>
+        alter table despesas add column if not exists prazo_recorrencia integer;<br/>
+        alter table receitas add column if not exists recorrente boolean default false;<br/>
+        alter table receitas add column if not exists prazo_recorrencia integer;<br/>
+        alter table manutencao add column if not exists status_financeiro text default 'pendente';<br/>
+        alter table manutencao add column if not exists data_pagamento date;<br/>
+        alter table manutencao add column if not exists recorrente boolean default false;<br/>
+        alter table manutencao add column if not exists prazo_recorrencia integer;<br/>
+        alter table despesas add column if not exists manutencao_id bigint;<br/>
+        alter table orcamento_pessoal add column if not exists prazo_recorrencia integer;
       </div>
     </div>
   </div>;
