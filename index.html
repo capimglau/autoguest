@@ -733,9 +733,9 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
             {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
             {(c.status_pagamento === "pendente" || !c.status_pagamento) && <button style={Ghost(C.sub)} onClick={async () => { await db.patch("contratos", c.id, { status_pagamento: "pago" }); setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x)); toast("Pagamento registrado!"); }}>💰 Pago</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
-            <button style={Ghost()} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
-            <button style={Ghost()} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
-            <button style={Ghost()} onClick={() => shareWhatsApp(c, cl, ve, empresa)}>WhatsApp</button>
+            <button style={Ghost(C.sub)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
+            <button style={Ghost(C.sub)} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
+            <button style={Ghost(C.sub)} onClick={() => shareWhatsApp(c, cl, ve, empresa)}>WhatsApp</button>
             <button style={Ghost(C.red)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>;
