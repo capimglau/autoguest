@@ -490,24 +490,20 @@ function Clientes({ clientes, setClientes, contratos, toast }) {
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum cliente</div>}
       {fil.map((c, i) => (
         <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{c.nome}</div>
-                {c.bloqueado && <span style={Badge(C.red)}>Bloqueado</span>}
-                {c.vencimento_cnh && c.vencimento_cnh <= hoje && <span style={Badge(C.orange)}>CNH Vencida</span>}
-              </div>
-              <div style={{ fontSize: 12, color: C.sub }}>CPF/CNPJ: {c.cpf || "--"} - CNH: {c.cnh || "--"} {c.categoria_cnh && "(" + c.categoria_cnh + ")"}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>Tel: {c.telefone || "--"}</div>
-              {c.bloqueado && c.motivo_bloqueio && <div style={{ fontSize: 12, color: C.red }}>Motivo: {c.motivo_bloqueio}</div>}
-              {c.cnh_url && <a href={c.cnh_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Ver CNH</a>}
-            </div>
-            <div style={{ display: "flex", gap: 6, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-              <button style={Ghost(C.teal)} onClick={() => verHist(c)}>Historico</button>
-              <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
-              <button style={Btn(c.bloqueado ? C.green : C.orange, true)} onClick={() => toggleBloquear(c)}>{c.bloqueado ? "Desbloquear" : "Bloquear"}</button>
-              <button style={Btn(C.red, true)} onClick={() => remove(c.id)}>✕</button>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>{c.nome}</div>
+            {c.bloqueado && <span style={Badge(C.red)}>Bloqueado</span>}
+            {c.vencimento_cnh && c.vencimento_cnh <= hoje && <span style={Badge(C.orange)}>CNH Vencida</span>}
+          </div>
+          <div style={{ fontSize: 12, color: C.sub }}>CPF/CNPJ: {c.cpf || "--"} · CNH: {c.cnh || "--"} {c.categoria_cnh && "(" + c.categoria_cnh + ")"}</div>
+          <div style={{ fontSize: 12, color: C.sub }}>Tel: {c.telefone || "--"}</div>
+          {c.bloqueado && c.motivo_bloqueio && <div style={{ fontSize: 12, color: C.red }}>Motivo: {c.motivo_bloqueio}</div>}
+          {c.cnh_url && <a href={c.cnh_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Ver CNH</a>}
+          <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+            <button style={Ghost(C.teal)} onClick={() => verHist(c)}>Historico</button>
+            <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
+            <button style={Btn(c.bloqueado ? C.green : C.orange, true)} onClick={() => toggleBloquear(c)}>{c.bloqueado ? "Desbloquear" : "Bloquear"}</button>
+            <button style={Btn(C.red, true)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>
       ))}
@@ -1672,7 +1668,91 @@ const TABS = [
 ];
 const ICONS = { inicio: "⊙", frota: "🚗", clientes: "👤", contratos: "📋", multas: "⚠️", manutencao: "🔧", financeiro: "💳", relatorios: "📊", config: "⚙️" };
 
+function LoginScreen({ onLogin }) {
+  const [pin, setPin] = useState("");
+  const [erro, setErro] = useState("");
+  const [usarPin, setUsarPin] = useState(false);
+  const PIN_CORRETO = "1234"; // PIN padrão — trocar nas configurações futuramente
+
+  async function tentarBiometrico() {
+    setErro("");
+    try {
+      if (!window.PublicKeyCredential) { setUsarPin(true); return; }
+      // Tenta criar uma credencial local para autenticação biométrica
+      const credId = localStorage.getItem("autogest_cred_id");
+      if (!credId) {
+        // Primeira vez: registra a biometria
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            rp: { name: "AutoGest Pro" },
+            user: { id: new Uint8Array(16), name: "usuario", displayName: "Usuário" },
+            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+            timeout: 60000
+          }
+        });
+        localStorage.setItem("autogest_cred_id", btoa(String.fromCharCode(...new Uint8Array(cred.rawId))));
+        onLogin();
+      } else {
+        // Já registrado: autentica
+        const rawId = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
+        await navigator.credentials.get({
+          publicKey: {
+            challenge: crypto.getRandomValues(new Uint8Array(32)),
+            allowCredentials: [{ type: "public-key", id: rawId }],
+            userVerification: "required",
+            timeout: 60000
+          }
+        });
+        onLogin();
+      }
+    } catch(e) {
+      if (e.name === "NotAllowedError") { setErro("Autenticação cancelada."); }
+      else { setUsarPin(true); }
+    }
+  }
+
+  function tentarPin() {
+    if (pin === PIN_CORRETO) { onLogin(); }
+    else { setErro("PIN incorreto."); setPin(""); }
+  }
+
+  return <div style={{ minHeight: "100vh", background: "#F2F2F7", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32 }}>
+    <div style={{ fontSize: 48, marginBottom: 16 }}>🚗</div>
+    <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 4 }}>AutoGest Pro</div>
+    <div style={{ fontSize: 14, color: "#8E8E93", marginBottom: 40 }}>Estilo Rent a Car</div>
+
+    {!usarPin ? (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, width: "100%", maxWidth: 280 }}>
+        <button onClick={tentarBiometrico} style={{ width: "100%", background: "#007AFF", color: "#fff", border: "none", borderRadius: 14, padding: "16px 20px", fontSize: 17, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 22 }}>􀎽</span> Entrar com Face ID
+        </button>
+        <button onClick={() => setUsarPin(true)} style={{ background: "none", border: "none", color: "#007AFF", fontSize: 15, cursor: "pointer", fontWeight: 500 }}>Usar PIN</button>
+        {erro && <div style={{ color: "#FF3B30", fontSize: 13, textAlign: "center" }}>{erro}</div>}
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, width: "100%", maxWidth: 280 }}>
+        <div style={{ fontSize: 15, color: "#3C3C43", fontWeight: 600 }}>Digite o PIN</div>
+        <input
+          type="password" inputMode="numeric" maxLength={4}
+          value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,""))}
+          onKeyDown={e => e.key === "Enter" && tentarPin()}
+          placeholder="••••"
+          style={{ width: "100%", textAlign: "center", fontSize: 28, letterSpacing: 12, padding: "14px 16px", borderRadius: 14, border: "1.5px solid #E5E5EA", outline: "none", background: "#fff", boxSizing: "border-box" }}
+          autoFocus
+        />
+        <button onClick={tentarPin} style={{ width: "100%", background: "#007AFF", color: "#fff", border: "none", borderRadius: 14, padding: "14px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Entrar</button>
+        <button onClick={() => { setUsarPin(false); setErro(""); setPin(""); }} style={{ background: "none", border: "none", color: "#007AFF", fontSize: 14, cursor: "pointer" }}>Usar Face ID</button>
+        {erro && <div style={{ color: "#FF3B30", fontSize: 13 }}>{erro}</div>}
+        <div style={{ fontSize: 12, color: "#8E8E93", textAlign: "center", marginTop: 4 }}>PIN padrão: 1234</div>
+      </div>
+    )}
+  </div>;
+}
+
 function App() {
+  const [logado, setLogado] = useState(false);
   const [tab, setTab] = useState("inicio");
   const [veiculos, setVeiculos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -1714,6 +1794,8 @@ function App() {
     if (tab === "config") return <Config empresa={empresa} setEmpresa={setEmpresa} toast={toast} />;
     return null;
   }
+
+  if (!logado) return <LoginScreen onLogin={() => setLogado(true)} />;
 
   if (mobile) return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 82 }}>
