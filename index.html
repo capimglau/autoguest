@@ -1720,9 +1720,9 @@ function App() {
       <div style={{ padding: "16px 16px 0" }}>{page()}</div>
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,.97)", backdropFilter: "blur(20px)", borderTop: "1px solid " + C.border, display: "flex", zIndex: 100, overflowX: "auto" }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", background: "none", border: "none", padding: "7px 10px 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, minWidth: 52 }}>
-            <span style={{ fontSize: 18 }}>{ICONS[t.id]}</span>
-            <span style={{ fontSize: 7, fontWeight: 600, color: tab === t.id ? C.blue : C.gray, whiteSpace: "nowrap" }}>{t.label}</span>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", background: "none", border: "none", padding: "8px 12px 11px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 62 }}>
+            <span style={{ fontSize: 24 }}>{ICONS[t.id]}</span>
+            <span style={{ fontSize: 9, fontWeight: 600, color: tab === t.id ? C.blue : C.gray, whiteSpace: "nowrap" }}>{t.label}</span>
           </button>
         ))}
       </nav>
