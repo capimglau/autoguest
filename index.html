@@ -704,10 +704,12 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       observacoes: ct.observacoes ? "Renovação contrato #" + numCt(ct.id) + ". " + ct.observacoes : "Renovação contrato #" + numCt(ct.id)
     };
     try {
-      await db.patch("contratos", ct.id, { status: "concluido" });
+      await db.patch("contratos", ct.id, { status: "concluido", renovado_para: 0 }); // temporário, atualiza abaixo
       setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, { status: "concluido" }) : c));
       const novo = await db.post("contratos", payload);
-      setContratos(p => [novo].concat(p));
+      // grava o id do novo contrato no original para rastreamento
+      await db.patch("contratos", ct.id, { renovado_para: novo.id });
+      setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, { status: "concluido", renovado_para: novo.id }) : c).concat([novo]));
       toast("Renovado! Novo contrato No " + numCt(novo.id));
     } catch(e) { toast("Erro ao renovar: " + e.message, "error"); }
   }
@@ -795,7 +797,22 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
     </div>}
     <div style={CARD}>
       {fil2.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum contrato</div>}
-      {fil2.map((c, i) => {
+      {(() => {
+        // Detecção confiável: pai foi renovado se existe filho com mesmo cliente+veiculo e data_inicio === data_fim do pai
+        var renovadosMap = {}; // id_pai -> contrato_filho
+        contratos.forEach(filho => {
+          if (!filho.data_inicio) return;
+          var pai = contratos.find(p =>
+            p.id !== filho.id &&
+            String(p.cliente_id) === String(filho.cliente_id) &&
+            String(p.veiculo_id) === String(filho.veiculo_id) &&
+            p.data_fim === filho.data_inicio
+          );
+          if (pai) renovadosMap[pai.id] = filho;
+        });
+        return fil2.map((c, i) => {
+        var foiRenovado = !!renovadosMap[c.id];
+        var ctFilho = renovadosMap[c.id];
         var cl = getCl(c.cliente_id); var ve = getVe(c.veiculo_id);
         var isPago     = c.status_pagamento === "pago";
         var isIsento   = c.status_pagamento === "isento";
@@ -810,7 +827,12 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         return <div key={c.id} style={cardStyle}>
           <div style={{ marginBottom: 6 }}>
             <div style={{ fontWeight: 600, fontSize: 14, color: "#1C1C1E" }}>{cl && cl.nome || "--"}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>#{numCt(c.id)} · <span style={{ color: "#3C3C43", fontWeight: 500 }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>#{numCt(c.id)} · <span style={{ color: "#3C3C43", fontWeight: 500 }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}
+              {c.observacoes && c.observacoes.startsWith("Renovação contrato") && (() => {
+                var match = c.observacoes.match(/Renovação contrato #(\d+)/);
+                return match ? <span style={{ marginLeft: 6, fontSize: 10, background: C.teal + "18", color: C.teal, borderRadius: 6, padding: "1px 6px", fontWeight: 600 }}>renovação de #{match[1]}</span> : null;
+              })()}
+            </div>
             <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
             {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 600 : 400, marginTop: 2 }}>
               {pagAtrasado ? "⚠ " : ""}Pgto: {fmtDate(c.previsao_pagamento)}
@@ -825,14 +847,15 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
               <span style={Badge(spCor)}>{spLabel}</span>
+              {foiRenovado && <span style={Badge(C.teal)}>↻ renovado{ctFilho ? " → #" + numCt(ctFilho.id) : ""}</span>}
             </div>
             <div style={{ fontWeight: 700, fontSize: 15, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
           </div>
           {c.observacoes && <div style={{ fontSize: 11, color: C.sub, marginTop: 4, fontStyle: "italic", whiteSpace: "pre-line", lineClamp: 2, overflow: "hidden", maxHeight: 34 }}>{c.observacoes}</div>}
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             <button style={Ghost(C.sub)} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
-            {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
-            {isPendente && <button style={Ghost(C.sub)} onClick={async () => {
+            {c.status === "ativo" && !foiRenovado && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>↻ Renovar</button>}
+            {isPendente && !foiRenovado && <button style={Ghost(C.sub)} onClick={async () => {
               var dtPag = new Date().toISOString().split("T")[0];
               var obs = c.observacoes ? c.observacoes + "\n" : "";
               obs += "Recebido em " + dtPag + " (" + (c.forma_pagamento || "sem forma") + ")";
@@ -860,7 +883,8 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
             <button style={Ghost(C.sub)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>;
-      })}
+        });
+      })()}
     </div>
     <Modal open={dispModal} onClose={() => setDispModal(false)} title="Disponibilidade de Veiculos" wide>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -2245,7 +2269,8 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table veiculos add column if not exists sinistros text;<br/>
         alter table clientes add column if not exists rg_url text;<br/>
         alter table clientes add column if not exists comprovante_url text;<br/>
-        alter table contratos add column if not exists observacoes_encerramento text;
+        alter table contratos add column if not exists observacoes_encerramento text;<br/>
+        alter table contratos add column if not exists renovado_para bigint;
       </div>
     </div>
   </div>;
