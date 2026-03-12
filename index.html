@@ -770,8 +770,16 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               await db.patch("contratos", c.id, { status_pagamento: "pendente" });
               setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pendente" }) : x));
               toast("↩ Pagamento revertido");
-            }}>↩ Reverter</button>}
+            }}>↩ Reverter pgto</button>}
             {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => concluir(c)}>Encerrar</button>}
+            {c.status === "concluido" && <button style={Ghost(C.orange)} onClick={async () => {
+              if (!confirm("Reabrir contrato como ativo?")) return;
+              await db.patch("contratos", c.id, { status: "ativo" });
+              await db.patch("veiculos", c.veiculo_id, { status: "alugado" });
+              setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status: "ativo" }) : x));
+              setVeiculos(p => p.map(v => v.id == c.veiculo_id ? Object.assign({}, v, { status: "alugado" }) : v));
+              toast("↩ Contrato reaberto");
+            }}>↩ Reabrir</button>}
             <button style={Ghost(C.sub)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
             <button style={Ghost(C.sub)} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
             <button style={Ghost(C.red)} onClick={() => remove(c.id)}>✕</button>
