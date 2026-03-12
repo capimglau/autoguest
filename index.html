@@ -843,13 +843,13 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               </div>
             )}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", flex: 1, minWidth: 0 }}>
               <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
               <span style={Badge(spCor)}>{spLabel}</span>
               {foiRenovado && <span style={Badge(C.teal)}>↻ renovado{ctFilho ? " → #" + numCt(ctFilho.id) : ""}</span>}
             </div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: isPago ? C.green : "#1C1C1E", whiteSpace: "nowrap", flexShrink: 0 }}>{fmtBRL(c.valor_total)}</div>
           </div>
           {c.observacoes && <div style={{ fontSize: 11, color: C.sub, marginTop: 4, fontStyle: "italic", whiteSpace: "pre-line", lineClamp: 2, overflow: "hidden", maxHeight: 34 }}>{c.observacoes}</div>}
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
