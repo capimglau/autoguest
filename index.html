@@ -265,7 +265,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
         </div>
         {(() => {
           var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual && !d.manutencao_id).reduce((s,d)=>s+parseFloat(d.valor||0),0);
-          var manMesAtualBanner = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
+          var manMesAtualBanner = manutencoes.filter(m => (m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
           var resultPrev = prevMes - despMesAtual - manMesAtualBanner;
           return (
             <div style={{ borderLeft: "1px solid " + C.border, paddingLeft: 12 }}>
@@ -305,7 +305,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
     {/* Linha 2: Despesas | Manutenções */}
     {(() => {
       var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual && !d.manutencao_id).reduce((s,d)=>s+parseFloat(d.valor||0),0);
-      var manMesAtual = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
+      var manMesAtual = manutencoes.filter(m => (m.data_previsao_pagamento || m.data_pagamento || m.data_entrada || "").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
       var resultParcial = recMes - despMesAtual - manMesAtual;
       return (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -317,7 +317,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
             <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>🔧 Manutenções</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
           </div>
         </div>
       );
@@ -1470,6 +1470,11 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
     return false;
   }
 
+  // Mês financeiro da manutenção: previsão de pgto > data pagamento > data entrada
+  function manMesRef(m) {
+    return (m.data_previsao_pagamento || m.data_pagamento || m.data_entrada || "").slice(0, 7);
+  }
+
   function receitaVisivelNoMes(r, mes) {
     var dataMes = (r.data || "").slice(0, 7);
     if (dataMes === mes) return true;
@@ -1523,7 +1528,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
 
   // Fluxo de caixa por mês
   var desByMes = {}; despesas.filter(d => !d.manutencao_id).forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (mes) { if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); } });
-  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
+  var manByMes = {}; manutencoes.forEach(function(m) { var mes = manMesRef(m); if (mes) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
   var multaByMes = {}; multas.forEach(function(m) { var mes = (m.data || "").slice(0, 7); if (mes) { if (!multaByMes[mes]) multaByMes[mes] = 0; multaByMes[mes] += parseFloat(m.valor || 0); } });
   var recByMes = {};
   contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").forEach(function(c) {
@@ -1544,8 +1549,8 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   var despMes = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id).reduce((s,d) => s+parseFloat(d.valor||0),0);
   var despMesPago = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id && d.status === "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
   var despMesPendente = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id && d.status !== "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
-  // Manutenções — sempre direto da tabela manutencoes, usando data_entrada como referência de mês
-  var manMesAll = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes);
+  // Manutenções — mês pelo campo de previsão de pagamento (ou data_entrada como fallback)
+  var manMesAll = manutencoes.filter(m => manMesRef(m) === filtroResumoMes);
   var manMes = manMesAll.reduce((s,m) => s+parseFloat(m.custo||0),0);
   var manMesPago = manMesAll.filter(m => m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
   var manMesPendente = manMes - manMesPago;
