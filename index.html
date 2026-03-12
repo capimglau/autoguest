@@ -887,7 +887,19 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
     setLoading(false);
   }
   async function remove(id) { if (!confirm("Excluir?")) return; await db.del("multas", id); setMultas(p => p.filter(m => m.id !== id)); toast("Excluido!"); }
-  async function pagar(m) { await db.patch("multas", m.id, { status: "pago" }); setMultas(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status: "pago" }) : x)); toast("Pago!"); }
+  async function pagar(m) {
+    var dt = prompt("Data do pagamento (AAAA-MM-DD):", new Date().toISOString().split("T")[0]);
+    if (!dt) return;
+    await db.patch("multas", m.id, { status: "pago", data_pagamento: dt });
+    setMultas(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status: "pago", data_pagamento: dt }) : x));
+    toast("✅ Multa paga!");
+  }
+  async function reverterMulta(m) {
+    if (!confirm("Reverter pagamento desta multa?")) return;
+    await db.patch("multas", m.id, { status: "pendente", data_pagamento: null });
+    setMultas(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status: "pendente", data_pagamento: null }) : x));
+    toast("↩ Revertido");
+  }
   const SC = { pendente: C.orange, pago: C.green, contestado: C.red };
   const total = fil.reduce((s, m) => s + parseFloat(m.valor || 0), 0);
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -921,24 +933,38 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma multa</div>}
       {fil.map((m, i) => {
         var ct = getCt(m.contrato_id); var cl = ct ? getCl(ct.cliente_id) : null; var ve = getVeByContrato(m.contrato_id);
-        return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
+        var hoje = new Date().toISOString().split("T")[0];
+        var isPago = m.status === "pago";
+        var isContestado = m.status === "contestado";
+        var vencida = !isPago && m.vencimento && m.vencimento < hoje;
+        var cardStyle = { padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" };
+        if (isPago) Object.assign(cardStyle, { borderLeft: "4px solid " + C.green, paddingLeft: 12, marginLeft: -4 });
+        else if (vencida) Object.assign(cardStyle, { borderLeft: "4px solid " + C.red, paddingLeft: 12, marginLeft: -4 });
+        return <div key={m.id} style={cardStyle}>
           <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div>
-              <div style={{ fontSize: 13, color: C.sub }}>👤 {cl && cl.nome || "--"}</div>
-              <div style={{ fontSize: 13, color: C.sub }}>🚗 {ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>Contrato #{m.contrato_id} · {fmtDate(m.data)}{m.local && " · " + m.local}</div>
+              <div style={{ fontSize: 13, color: C.sub }}>👤 {cl && cl.nome || "--"} · 🚗 {ve && ve.placa || "--"}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>📅 Infração: {fmtDate(m.data)}{m.local && " · " + m.local}</div>
+              {m.vencimento && <div style={{ fontSize: 12, color: vencida && !isPago ? C.red : C.sub, fontWeight: vencida && !isPago ? 700 : 400 }}>{vencida && !isPago ? "🚨 " : "💳 "}Vencimento: {fmtDate(m.vencimento)}</div>}
+              {isPago && m.data_pagamento && <div style={{ fontSize: 12, color: C.green }}>✅ Pago em: {fmtDate(m.data_pagamento)}</div>}
+              {m.pontos && <div style={{ fontSize: 11, color: C.sub }}>🔴 {m.pontos} pontos</div>}
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                 {m.auto_infracao_url && <a href={m.auto_infracao_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Auto Infracao</a>}
                 {m.cnh_condutor_url && <a href={m.cnh_condutor_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>CNH Condutor</a>}
               </div>
             </div>
-            <div style={{ textAlign: "right" }}><div style={{ fontWeight: 800, fontSize: 17, color: C.red }}>{fmtBRL(m.valor)}</div><span style={Badge(SC[m.status] || C.gray)}>{m.status}</span>{m.pontos && <div style={{ fontSize: 11, color: C.sub }}>{m.pontos} pts</div>}</div>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: isPago ? C.green : vencida ? C.red : C.red }}>{fmtBRL(m.valor)}</div>
+              <span style={Badge(SC[m.status] || C.gray)}>{m.status}</span>
+              {vencida && !isPago && <span style={Badge(C.red)}>🚨 vencida</span>}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-            {m.status === "pendente" && <button style={Btn(C.green, true)} onClick={() => pagar(m)}>Pago</button>}
+          <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+            {!isPago && <button style={Ghost(C.green)} onClick={() => pagar(m)}>💰 Pagar</button>}
+            {isPago && <button style={Ghost(C.red)} onClick={() => reverterMulta(m)}>↩ Reverter</button>}
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
-            <button style={Btn(C.red, true)} onClick={() => remove(m.id)}>✕</button>
+            <button style={Ghost(C.red)} onClick={() => remove(m.id)}>✕</button>
           </div>
         </div>;
       })}
@@ -952,6 +978,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <Lbl label="Data *" flex={1}><input style={FI} type="date" value={form.data || ""} onChange={e => F("data", e.target.value)} /></Lbl>
+          <Lbl label="Vencimento" flex={1}><input style={FI} type="date" value={form.vencimento || ""} onChange={e => F("vencimento", e.target.value)} /></Lbl>
           <Lbl label="Pontos" flex={1}><input style={FI} type="number" value={form.pontos || ""} onChange={e => F("pontos", e.target.value)} /></Lbl>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
@@ -1097,32 +1124,50 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, despes
     </div>
     <div style={CARD}>
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma manutenção</div>}
-      {fil.map((m, i) => { var ve = getVe(m.veiculo_id); var despVinc = despesas.find(d => d.manutencao_id == m.id); var financPago = m.status_financeiro === "pago" || (despVinc && despVinc.status === "pago"); return <div key={m.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div>
-            <div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-            <div style={{ fontSize: 12, color: C.sub }}>Entrada: {fmtDate(m.data_entrada)}{m.data_saida && " · Saída: " + fmtDate(m.data_saida)}</div>
-            {m.oficina && <div style={{ fontSize: 12, color: C.sub }}>🏪 {m.oficina}</div>}
-            {m.recorrente && <div style={{ fontSize: 11, color: C.orange }}>🔁 Recorrente{m.prazo_recorrencia ? " · Prazo: " + m.prazo_recorrencia + " meses" : ""}</div>}
-            <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
-              {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orçamento</a>}
-              {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota de Serviço</a>}
+      {fil.map((m, i) => {
+        var ve = getVe(m.veiculo_id);
+        var despVinc = despesas.find(d => String(d.manutencao_id) === String(m.id));
+        var financPago = m.status_financeiro === "pago" || (despVinc && despVinc.status === "pago");
+        var hoje = new Date().toISOString().split("T")[0];
+        var vencida = !financPago && m.data_previsao_pagamento && m.data_previsao_pagamento < hoje;
+        return <div key={m.id} style={{ padding: "14px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none", ...(financPago ? { borderLeft: "4px solid " + C.green, paddingLeft: 12, marginLeft: -4 } : vencida ? { borderLeft: "4px solid " + C.red, paddingLeft: 12, marginLeft: -4 } : {}) }}>
+          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{m.tipo}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} · {ve && ve.modelo || ""}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>📅 Entrada: {fmtDate(m.data_entrada)}{m.data_saida && " · Saída: " + fmtDate(m.data_saida)}</div>
+              {m.data_previsao_pagamento && <div style={{ fontSize: 12, color: vencida ? C.red : C.sub, fontWeight: vencida ? 700 : 400 }}>{vencida ? "🚨 " : "💳 "}Pgto previsto: {fmtDate(m.data_previsao_pagamento)}</div>}
+              {financPago && m.data_pagamento && <div style={{ fontSize: 12, color: C.green }}>✅ Pago em: {fmtDate(m.data_pagamento)}</div>}
+              {m.oficina && <div style={{ fontSize: 12, color: C.sub }}>🏪 {m.oficina}</div>}
+              {m.recorrente && <div style={{ fontSize: 11, color: C.orange }}>🔁 Recorrente{m.prazo_recorrencia ? " · " + m.prazo_recorrencia + "m" : ""}</div>}
+              <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
+                {m.orcamento_url && <a href={m.orcamento_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>📄 Orçamento</a>}
+                {m.nota_servico_url && <a href={m.nota_servico_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>🧾 Nota</a>}
+              </div>
+            </div>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              {parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 18, color: financPago ? C.green : C.purple }}>{fmtBRL(m.custo)}</div>}
+              <span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span>
+              {parseFloat(m.custo || 0) > 0 && <span style={Badge(financPago ? C.green : vencida ? C.red : C.orange)}>{financPago ? "💰 pago" : vencida ? "🚨 vencido" : "⏳ pendente"}</span>}
             </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            {parseFloat(m.custo || 0) > 0 && <div style={{ fontWeight: 800, fontSize: 16, color: financPago ? C.green : C.purple }}>{fmtBRL(m.custo)}</div>}
-            <span style={Badge(SC[m.status] || C.gray)}>{(m.status || "").replace("_", " ")}</span>
-            {parseFloat(m.custo || 0) > 0 && <div style={{ marginTop: 4 }}><span style={Badge(financPago ? C.green : C.orange)}>{financPago ? "💰 pago" : "⏳ pendente"}</span></div>}
+          <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
+            {m.status === "em_andamento" && <button style={Ghost(C.green)} onClick={() => concluir(m)}>✅ Concluir</button>}
+            {parseFloat(m.custo || 0) > 0 && !financPago && <button style={Ghost(C.purple)} onClick={() => { setBaixarItem(m); setBaixarData(new Date().toISOString().split("T")[0]); setBaixarModal(true); }}>💸 Baixar</button>}
+            {parseFloat(m.custo || 0) > 0 && financPago && <button style={Ghost(C.red)} onClick={async () => {
+              if (!confirm("Reverter pagamento desta manutenção?")) return;
+              try {
+                if (despVinc) { await db.patch("despesas", despVinc.id, { status: "previsto", data_pagamento: null }); setDespesas(p => p.map(x => x.id === despVinc.id ? Object.assign({}, x, { status: "previsto", data_pagamento: null }) : x)); }
+                await db.patch("manutencao", m.id, { status_financeiro: "pendente", data_pagamento: null });
+                setManutencoes(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status_financeiro: "pendente", data_pagamento: null }) : x));
+                toast("↩ Pagamento revertido");
+              } catch(e) { toast("Erro: " + e.message, "error"); }
+            }}>↩ Reverter</button>}
+            <button style={Ghost()} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
+            <button style={Ghost(C.red)} onClick={() => remove(m.id)}>✕</button>
           </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {m.status === "em_andamento" && <button style={Btn(C.green, true)} onClick={() => concluir(m)}>✅ Concluir</button>}
-          {parseFloat(m.custo || 0) > 0 && !financPago && <button style={Btn(C.red, true)} onClick={() => { setBaixarItem(m); setBaixarData(new Date().toISOString().split("T")[0]); setBaixarModal(true); }}>💸 Baixar Despesa</button>}
-          <button style={Ghost(C.purple)} onClick={() => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }}>Editar</button>
-          <button style={Btn(C.red, true)} onClick={() => remove(m.id)}>✕</button>
-        </div>
-      </div>; })}
+        </div>;
+      })}
     </div>
 
     {/* Modal Baixar Despesa */}
@@ -1153,6 +1198,7 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, despes
           <Lbl label="Oficina" flex={2}><input style={FI} value={form.oficina || ""} onChange={e => F("oficina", e.target.value)} /></Lbl>
           <Lbl label="Custo (R$)" flex={1}><input style={FI} type="number" step="0.01" value={form.custo || ""} onChange={e => F("custo", e.target.value)} /></Lbl>
         </div>
+        <Lbl label="Previsão de Pagamento"><input style={FI} type="date" value={form.data_previsao_pagamento || ""} onChange={e => F("data_previsao_pagamento", e.target.value)} /></Lbl>
         {/* Recorrente */}
         <div onClick={() => F("recorrente", !form.recorrente)} style={{ display: "flex", alignItems: "center", gap: 10, background: form.recorrente ? C.orange + "15" : C.border + "40", borderRadius: 12, padding: "12px 14px", cursor: "pointer", border: "1.5px solid " + (form.recorrente ? C.orange : C.border) }}>
           <div style={{ width: 22, height: 22, borderRadius: 6, background: form.recorrente ? C.orange : "#fff", border: "2px solid " + (form.recorrente ? C.orange : "#C7C7CC"), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1484,14 +1530,15 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
 
   // Fluxo de caixa por mês
   var desByMes = {}; despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (mes) { if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); } });
-  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
+  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes && !despesas.find(d => String(d.manutencao_id) === String(m.id))) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
+  var multaByMes = {}; multas.forEach(function(m) { var mes = (m.data || "").slice(0, 7); if (mes) { if (!multaByMes[mes]) multaByMes[mes] = 0; multaByMes[mes] += parseFloat(m.valor || 0); } });
   var recByMes = {};
   contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").forEach(function(c) {
     var mes = (c.previsao_pagamento || c.data_fim || "").slice(0, 7);
     if (mes) { if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(c.valor_total || 0); }
   });
   receitas.forEach(function(r) { var mes = (r.data || "").slice(0, 7); if (mes) { if (!recByMes[mes]) recByMes[mes] = 0; recByMes[mes] += parseFloat(r.valor || 0); } });
-  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)).concat(Object.keys(manByMes)))).filter(Boolean).sort().reverse().slice(0, 12);
+  var meses = Array.from(new Set(Object.keys(desByMes).concat(Object.keys(recByMes)).concat(Object.keys(manByMes)).concat(Object.keys(multaByMes)))).filter(Boolean).sort().reverse().slice(0, 12);
 
   // Receitas do mês selecionado (resumo)
   var recMesContratos = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === filtroResumoMes);
@@ -1500,16 +1547,23 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   var recMesPendente = recMesContratos.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
   var recMesManual = receitas.filter(r => (r.data||"").slice(0,7) === filtroResumoMes).reduce((s,r) => s+parseFloat(r.valor||0),0);
 
-  // Despesas do mês selecionado (resumo) - SEM contas, tudo como despesas
+  // Despesas do mês (inclui as de categoria Manutencao que vieram da integração)
   var despMes = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes)).reduce((s,d) => s+parseFloat(d.valor||0),0);
   var despMesPago = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status === "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
   var despMesPendente = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status !== "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
-  var manMes = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes).reduce((s,m) => s+parseFloat(m.custo||0),0);
-  var manMesPago = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes && m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
-  var totalDespMes = despMesPago + manMesPago;
+  // Manutenções SEM despesa vinculada (para não contar duas vezes)
+  var manSemDesp = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes && !despesas.find(d => String(d.manutencao_id) === String(m.id)));
+  var manMes = manSemDesp.reduce((s,m) => s+parseFloat(m.custo||0),0);
+  var manMesPago = manSemDesp.filter(m => m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
+  // Multas do mês
+  var multasMes = multas.filter(m => (m.data||"").slice(0,7) === filtroResumoMes);
+  var multasMesPago = multasMes.filter(m => m.status === "pago").reduce((s,m) => s+parseFloat(m.valor||0),0);
+  var multasMesPendente = multasMes.filter(m => m.status === "pendente").reduce((s,m) => s+parseFloat(m.valor||0),0);
+  var multasMesTotal = multasMes.reduce((s,m) => s+parseFloat(m.valor||0),0);
+  var totalDespMes = despMesPago + manMesPago + multasMesPago;
 
   var saldoMes = (recMesRecebida + recMesManual) - totalDespMes;
-  var saldoProjetado = (recMesPrevista + recMesManual) - (despMes + manMes);
+  var saldoProjetado = (recMesPrevista + recMesManual) - (despMes + manMes + multasMesTotal);
 
   var CATS_DESP = ["Combustivel", "Limpeza", "Impostos", "Salarios", "Aluguel", "Manutencao", "Marketing", "Seguros", "Outros"];
   var CATS_REC = ["Locacao", "Servico", "Multa Cobrada", "Deposito", "Outros"];
@@ -1550,17 +1604,20 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       </div>
 
       <div style={CARD}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Despesas do Mês</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", marginBottom: 12 }}>Saídas do Mês</div>
         {[
           { label: "Despesas previstas", val: despMes, color: C.sub },
           { label: "✅ Despesas pagas", val: despMesPago, color: C.red },
-          { label: "⏳ A pagar", val: despMesPendente, color: C.orange },
-          { label: "🔧 Manutenções previstas", val: manMes, color: C.sub },
+          { label: "⏳ Despesas a pagar", val: despMesPendente, color: C.orange },
+          { label: "🔧 Manutenções (sem desp. vinc.)", val: manMes, color: C.sub },
           { label: "✅ Manutenções pagas", val: manMesPago, color: C.purple },
           { label: "⏳ Manutenções a pagar", val: manMes - manMesPago, color: C.orange },
+          { label: "⚠️ Multas do mês", val: multasMesTotal, color: C.sub },
+          { label: "✅ Multas pagas", val: multasMesPago, color: C.red },
+          { label: "⏳ Multas pendentes", val: multasMesPendente, color: C.orange },
           { label: "Total saídas realizadas", val: totalDespMes, color: C.red, bold: true },
-        ].map((row, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 6 ? "1px solid " + C.border : "none" }}>
+        ].map((row, i, arr) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < arr.length - 1 ? "1px solid " + C.border : "none" }}>
             <span style={{ fontWeight: row.bold ? 800 : 400, fontSize: row.bold ? 15 : 13 }}>{row.label}</span>
             <span style={{ fontWeight: 800, color: row.color }}>{fmtBRL(row.val)}</span>
           </div>
@@ -1587,9 +1644,10 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           { label: "Outras Receitas", val: receitaManual, color: C.green },
           { label: "(-) Despesas Operacionais", val: -totalDesp, color: C.red },
           { label: "(-) Custo de Manutencao", val: -totalMan, color: C.red },
-          { label: "= Resultado Liquido", val: lucro, color: lucro >= 0 ? C.green : C.red, bold: true },
+          { label: "(-) Multas Pagas", val: -multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0), color: C.red },
+          { label: "= Resultado Liquido", val: lucro - multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0), color: (lucro - multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0)) >= 0 ? C.green : C.red, bold: true },
         ].map((row, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: i < 4 ? "1px solid " + C.border : "none" }}>
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: i < 5 ? "1px solid " + C.border : "none" }}>
             <span style={{ fontWeight: row.bold ? 800 : 500, fontSize: row.bold ? 15 : 14 }}>{row.label}</span>
             <span style={{ fontWeight: 800, color: row.color, fontSize: row.bold ? 16 : 14 }}>{fmtBRL(Math.abs(row.val))}</span>
           </div>
@@ -1728,15 +1786,17 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.green }}>Receitas</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.red }}>Despesas</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.purple }}>Manutenção</th>
+            <th style={{ padding: "8px 12px", textAlign: "right", color: C.orange }}>Multas</th>
             <th style={{ padding: "8px 12px", textAlign: "right", color: C.blue }}>Saldo</th>
           </tr></thead>
           <tbody>{meses.map(mes => {
-            var rec = recByMes[mes] || 0; var desp = desByMes[mes] || 0; var man = manByMes[mes] || 0; var saldo = rec - desp - man;
+            var rec = recByMes[mes] || 0; var desp = desByMes[mes] || 0; var man = manByMes[mes] || 0; var mult = multaByMes[mes] || 0; var saldo = rec - desp - man - mult;
             return <tr key={mes} style={{ borderTop: "1px solid " + C.border }}>
               <td style={{ padding: "8px 12px", fontWeight: 600 }}>{mes}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: C.green, fontWeight: 600 }}>{fmtBRL(rec)}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: C.red, fontWeight: 600 }}>{fmtBRL(desp)}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: C.purple, fontWeight: 600 }}>{fmtBRL(man)}</td>
+              <td style={{ padding: "8px 12px", textAlign: "right", color: C.orange, fontWeight: 600 }}>{fmtBRL(mult)}</td>
               <td style={{ padding: "8px 12px", textAlign: "right", color: saldo >= 0 ? C.green : C.red, fontWeight: 800 }}>{fmtBRL(saldo)}</td>
             </tr>;
           })}</tbody>
@@ -2008,7 +2068,10 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table manutencao add column if not exists recorrente boolean default false;<br/>
         alter table manutencao add column if not exists prazo_recorrencia integer;<br/>
         alter table despesas add column if not exists manutencao_id bigint;<br/>
-        alter table orcamento_pessoal add column if not exists prazo_recorrencia integer;
+        alter table orcamento_pessoal add column if not exists prazo_recorrencia integer;<br/>
+        alter table multas add column if not exists vencimento date;<br/>
+        alter table multas add column if not exists data_pagamento date;<br/>
+        alter table manutencao add column if not exists data_previsao_pagamento date;
       </div>
     </div>
   </div>;
