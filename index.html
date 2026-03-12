@@ -50,13 +50,13 @@ const db = {
   }
 };
 
-const C = { bg: "#F2F2F7", card: "#FFF", border: "#E5E5EA", blue: "#007AFF", red: "#FF3B30", green: "#34C759", orange: "#FF9500", purple: "#AF52DE", teal: "#32ADE6", gray: "#8E8E93", sub: "#6D6D72" };
-const FI = { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid #E5E5EA", fontSize: 15, outline: "none", background: "#F2F2F7", color: "#1C1C1E" };
-const CARD = { background: "#FFF", borderRadius: 16, padding: 18, boxShadow: "0 1px 4px rgba(0,0,0,.07)", border: "1px solid #E5E5EA" };
+const C = { bg: "#F5F5F7", card: "#FFF", border: "#E8E8ED", blue: "#007AFF", red: "#FF3B30", green: "#34C759", orange: "#FF9500", purple: "#AF52DE", teal: "#32ADE6", gray: "#C7C7CC", sub: "#8E8E93" };
+const FI = { width: "100%", padding: "10px 13px", borderRadius: 9, border: "1px solid #E8E8ED", fontSize: 14, outline: "none", background: "#F5F5F7", color: "#1C1C1E" };
+const CARD = { background: "#FFF", borderRadius: 16, padding: 16, boxShadow: "0 1px 3px rgba(0,0,0,.05)", border: "1px solid #EBEBF0" };
 
-function Btn(bg, sm) { return { background: bg || C.blue, color: "#fff", border: "none", borderRadius: 10, padding: sm ? "8px 14px" : "11px 20px", fontSize: sm ? 13 : 15, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
-function Ghost(c) { return { background: "transparent", color: c || C.blue, border: "1.5px solid " + (c || C.blue), borderRadius: 10, padding: "8px 14px", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
-function Badge(c) { return { background: c + "22", color: c, borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 700, display: "inline-block", whiteSpace: "nowrap" }; }
+function Btn(bg, sm) { return { background: bg || C.blue, color: "#fff", border: "none", borderRadius: 10, padding: sm ? "7px 13px" : "10px 20px", fontSize: sm ? 13 : 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
+function Ghost(c) { return { background: "transparent", color: c || C.sub, border: "1px solid " + (c ? c + "55" : C.border), borderRadius: 8, padding: "7px 13px", fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }; }
+function Badge(c) { return { background: c + "18", color: c, borderRadius: 20, padding: "3px 9px", fontSize: 11, fontWeight: 600, display: "inline-block", whiteSpace: "nowrap" }; }
 function numCt(id) { return String(id).padStart(5, "0"); }
 function fmtBRL(v) { return "R$ " + parseFloat(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 }); }
 function fmtDate(d) { if (!d) return "--"; var p = d.split("-"); if (p.length !== 3) return d; return p[2] + "/" + p[1] + "/" + p[0].slice(2); }
@@ -232,36 +232,38 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const contasVencidas = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento < hoje);
   const contasVencendo = (contas || []).filter(c => c.status === "pendente" && c.vencimento && c.vencimento >= hoje && c.vencimento <= str3);
   const manutProlongadas = manutencoes.filter(m => m.status === "em_andamento" && m.data_saida && m.data_saida < hoje);
-  const totalAlertas = contratosAtrasados.length + cnhVencida.length + contasVencidas.length + manutProlongadas.length;
+  const str60 = new Date(Date.now() + 60*864e5).toISOString().split("T")[0];
+  const docsVencidos = veiculos.filter(v => [v.venc_ipva, v.venc_seguro, v.venc_licenciamento, v.venc_revisao].some(d => d && d < hoje));
+  const docsVencendo = veiculos.filter(v => [v.venc_ipva, v.venc_seguro, v.venc_licenciamento, v.venc_revisao].some(d => d && d >= hoje && d <= str60) && ![v.venc_ipva, v.venc_seguro, v.venc_licenciamento, v.venc_revisao].some(d => d && d < hoje));
+  const totalAlertas = contratosAtrasados.length + cnhVencida.length + contasVencidas.length + manutProlongadas.length + docsVencidos.length;
 
   function AlertBox({ cor, icon, titulo, items, sub, tab }) {
     if (!items || items.length === 0) return null;
-    return <div onClick={() => tab && setTab(tab)} style={{ background: cor + "12", border: "1.5px solid " + cor, borderRadius: 14, padding: "12px 16px", cursor: tab ? "pointer" : "default" }}>
+    return <div onClick={() => tab && setTab(tab)} style={{ background: cor + "0D", border: "1px solid " + cor + "40", borderRadius: 14, padding: "12px 16px", cursor: tab ? "pointer" : "default" }}>
       <div style={{ fontWeight: 700, color: cor, fontSize: 14, marginBottom: items.length > 1 ? 8 : 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>{icon} {titulo}{tab && <span style={{ fontSize: 12, opacity: 0.7 }}>Ver →</span>}</div>
       {items.map((it, i) => <div key={i} style={{ fontSize: 13, color: "#333", paddingTop: 4, borderTop: i > 0 ? "1px solid " + cor + "30" : "none", marginTop: i > 0 ? 4 : 0 }}>{it}</div>)}
       {sub && <div style={{ fontSize: 12, color: cor, marginTop: 6, fontWeight: 600 }}>{sub}</div>}
     </div>;
   }
 
-  return <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+  return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>AutoGest Pro</div>
-        <div style={{ fontSize: 13, color: C.sub, marginTop: 1, textTransform: "capitalize" }}>{nomeMes}</div>
+        <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.3, color: "#1C1C1E" }}>AutoGest Pro</div>
+        <div style={{ fontSize: 12, color: C.sub, marginTop: 1, textTransform: "capitalize" }}>{nomeMes}</div>
       </div>
-      {totalAlertas > 0 && <div style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "4px 14px", fontSize: 13, fontWeight: 700 }}>⚠️ {totalAlertas}</div>}
+      {totalAlertas > 0 && <div style={{ background: C.red + "15", color: C.red, borderRadius: 20, padding: "4px 12px", fontSize: 12, fontWeight: 600 }}>⚠️ {totalAlertas}</div>}
     </div>
 
-
-    {/* Banner principal — 2 colunas: Previsão | Resultado Previsto */}
-    <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 20, padding: "14px 16px", border: "1px solid " + C.border, cursor: "pointer" }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: C.sub, textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>{nomeMes}</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+    {/* Banner principal */}
+    <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "12px 14px", border: "1px solid " + C.border, cursor: "pointer" }}>
+      <div style={{ fontSize: 9, fontWeight: 500, color: C.sub, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 8 }}>{nomeMes}</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Previsão</div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: "#1C1C1E" }}>{fmtBRL(prevMes)}</div>
-          <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>faturamento</div>
+          <div style={{ fontSize: 9, color: C.sub, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 1 }}>Previsão</div>
+          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3, color: "#1C1C1E", lineHeight: 1.1 }}>{fmtBRL(prevMes)}</div>
+          <div style={{ fontSize: 10, color: C.sub, marginTop: 1 }}>faturamento</div>
         </div>
         {(() => {
           var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual && !d.manutencao_id).reduce((s,d)=>s+parseFloat(d.valor||0),0);
@@ -269,17 +271,17 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           var resultPrev = prevMes - despMesAtual - manMesAtualBanner;
           return (
             <div style={{ borderLeft: "1px solid " + C.border, paddingLeft: 12 }}>
-              <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Resultado Prev.</div>
-              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: resultPrev >= 0 ? C.green : C.red }}>{fmtBRL(resultPrev)}</div>
-              <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>após despesas</div>
+              <div style={{ fontSize: 9, color: C.sub, fontWeight: 500, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 1 }}>Resultado</div>
+              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3, color: resultPrev >= 0 ? C.green : C.red, lineHeight: 1.1 }}>{fmtBRL(resultPrev)}</div>
+              <div style={{ fontSize: 10, color: C.sub, marginTop: 1 }}>após despesas</div>
             </div>
           );
         })()}
       </div>
-      <div style={{ display: "flex", gap: 0, marginTop: 12, paddingTop: 10, borderTop: "1px solid " + C.border }}>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PAGOS</div><div style={{ fontSize: 15, fontWeight: 800, color: C.green }}>{pagosMes}</div></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>PENDENTES</div><div style={{ fontSize: 15, fontWeight: 800, color: pendMes > 0 ? C.orange : "#1C1C1E" }}>{pendMes}</div></div>
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: C.sub, fontWeight: 600 }}>ATRASADOS</div><div style={{ fontSize: 15, fontWeight: 800, color: contratosAtrasados.length > 0 ? C.red : "#1C1C1E" }}>{contratosAtrasados.length}</div></div>
+      <div style={{ display: "flex", gap: 0, paddingTop: 8, borderTop: "1px solid " + C.border }}>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: C.sub, fontWeight: 400, textTransform: "uppercase" }}>Pagos</div><div style={{ fontSize: 13, fontWeight: 600, color: C.green, marginTop: 1 }}>{pagosMes}</div></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: C.sub, fontWeight: 400, textTransform: "uppercase" }}>Pendentes</div><div style={{ fontSize: 13, fontWeight: 600, color: pendMes > 0 ? C.orange : C.sub, marginTop: 1 }}>{pendMes}</div></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 9, color: C.sub, fontWeight: 400, textTransform: "uppercase" }}>Atrasados</div><div style={{ fontSize: 13, fontWeight: 600, color: contratosAtrasados.length > 0 ? C.red : C.sub, marginTop: 1 }}>{contratosAtrasados.length}</div></div>
       </div>
     </div>
 
@@ -288,15 +290,15 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       var aRec = ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
       return (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>A Receber</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: aRec > 0 ? C.orange : C.green, marginTop: 4 }}>{fmtBRL(aRec)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length} contrato(s)</div>
+          <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 14, padding: "14px", cursor: "pointer", border: "1px solid " + C.border }}>
+            <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>A Receber</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: aRec > 0 ? C.orange : C.green, marginTop: 4 }}>{fmtBRL(aRec)}</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{ctsMes.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length} contrato(s)</div>
           </div>
-          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Recebido</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.green, marginTop: 4 }}>{fmtBRL(recMes)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{pagosMes} contrato(s)</div>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 14, padding: "14px", cursor: "pointer", border: "1px solid " + C.border }}>
+            <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Recebido</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.green, marginTop: 4 }}>{fmtBRL(recMes)}</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{pagosMes} contrato(s)</div>
           </div>
         </div>
       );
@@ -309,32 +311,32 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
       var resultParcial = recMes - despMesAtual - manMesAtual;
       return (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 14, padding: "14px", cursor: "pointer", border: "1px solid " + C.border }}>
+            <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>no mês</div>
           </div>
-          <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>🔧 Manutenções</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
+          <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 14, padding: "14px", cursor: "pointer", border: "1px solid " + C.border }}>
+            <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Manutenções</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
           </div>
         </div>
       );
     })()}
 
-    {/* Linha 3: Próx. Mês - largura total */}
+    {/* Linha 3: Próx. Mês */}
     {(() => {
       var proxMesStr = (() => { var d = new Date(); d.setMonth(d.getMonth()+1); return d.toISOString().slice(0,7); })();
       var proxVal = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
       var proxQt = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === proxMesStr).length;
       return (
-        <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div onClick={() => setTab("contratos")} style={{ background: "#fff", borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid " + C.border }}>
           <div>
-            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Próximo Mês</div>
-            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{proxQt} contrato(s)</div>
+            <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Próximo Mês</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{proxQt} contrato(s)</div>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.teal }}>{fmtBRL(proxVal)}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.teal }}>{fmtBRL(proxVal)}</div>
         </div>
       );
     })()}
@@ -358,6 +360,10 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           items={contasVencendo.map(c => c.descricao + " · " + fmtBRL(c.valor) + " · " + fmtDate(c.vencimento))} tab="financeiro" />
         <AlertBox cor={C.purple} icon="🔧" titulo={"Manutencoes com prazo vencido (" + manutProlongadas.length + ")"}
           items={manutProlongadas.map(m => { var ve = veiculos.find(v => v.id == m.veiculo_id); return (ve && ve.placa || "--") + " · " + m.tipo + " · " + fmtDate(m.data_saida); })} tab="manutencao" />
+        <AlertBox cor={C.red} icon="📄" titulo={"Documentos vencidos (" + docsVencidos.length + ")"}
+          items={docsVencidos.map(v => { var tipos = [["IPVA",v.venc_ipva],["Seguro",v.venc_seguro],["Licenc.",v.venc_licenciamento],["Revisão",v.venc_revisao]].filter(([,d])=>d&&d<hoje).map(([l,d])=>l+": "+fmtDate(d)).join(", "); return v.placa + " · " + tipos; })} tab="frota" />
+        <AlertBox cor={C.orange} icon="📄" titulo={"Documentos vencendo em 60 dias (" + docsVencendo.length + ")"}
+          items={docsVencendo.map(v => { var str60b = new Date(Date.now() + 60*864e5).toISOString().split("T")[0]; var tipos = [["IPVA",v.venc_ipva],["Seguro",v.venc_seguro],["Licenc.",v.venc_licenciamento],["Revisão",v.venc_revisao]].filter(([,d])=>d&&d>=hoje&&d<=str60b).map(([l,d])=>l+": "+fmtDate(d)).join(", "); return v.placa + " · " + tipos; })} tab="frota" />
       </div>
     )}
 
@@ -420,17 +426,31 @@ function Frota({ veiculos, setVeiculos, toast }) {
       {fil.map(v => (
         <div key={v.id} style={Object.assign({}, CARD, { display: "flex", flexDirection: "column", gap: 10 })}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div><div style={{ fontWeight: 700, fontSize: 16 }}>{v.marca} {v.modelo}</div><div style={{ fontWeight: 800, fontSize: 20, letterSpacing: 2, color: C.blue }}>{v.placa}</div></div>
+            <div><div style={{ fontWeight: 600, fontSize: 15 }}>{v.marca} {v.modelo}</div><div style={{ fontWeight: 700, fontSize: 18, letterSpacing: 2, color: C.blue }}>{v.placa}</div></div>
             <span style={Badge(SC[v.status] || C.gray)}>{v.status}</span>
           </div>
           <div style={{ fontSize: 12, color: C.sub, display: "flex", gap: 12, flexWrap: "wrap" }}>
             {v.ano && <span>{v.ano}</span>}{v.cor && <span>{v.cor}</span>}{v.km && <span>{Number(v.km).toLocaleString()} km</span>}
           </div>
-          <div style={{ fontWeight: 700, color: C.green }}>{fmtBRL(v.valor_diaria)}<span style={{ fontWeight: 400, fontSize: 12, color: C.sub }}>/dia</span></div>
-          {v.crv_url && <a href={v.crv_url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: C.teal, fontWeight: 600 }}>Ver CRV</a>}
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ fontWeight: 600, color: C.green, fontSize: 14 }}>{fmtBRL(v.valor_diaria)}<span style={{ fontWeight: 400, fontSize: 12, color: C.sub }}>/dia</span></div>
+          {(() => {
+            var hoje2 = new Date().toISOString().split("T")[0];
+            var str30 = new Date(Date.now() + 30*864e5).toISOString().split("T")[0];
+            var docs = [
+              { label: "IPVA", d: v.venc_ipva }, { label: "Seguro", d: v.venc_seguro },
+              { label: "Licenc.", d: v.venc_licenciamento }, { label: "Revisão", d: v.venc_revisao }
+            ].filter(x => x.d);
+            var vencidos = docs.filter(x => x.d < hoje2);
+            var vencendo = docs.filter(x => x.d >= hoje2 && x.d <= str30);
+            return <>
+              {vencidos.map(x => <div key={x.label} style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>⚠ {x.label} vencido: {fmtDate(x.d)}</div>)}
+              {vencendo.map(x => <div key={x.label} style={{ fontSize: 11, color: C.orange }}>⚠ {x.label} vence: {fmtDate(x.d)}</div>)}
+            </>;
+          })()}
+          {v.crv_url && <a href={v.crv_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal }}>CRV/CRLV</a>}
+          <div style={{ display: "flex", gap: 6 }}>
             <button style={Object.assign({}, Ghost(), { flex: 1 })} onClick={() => { setForm(Object.assign({}, v)); setEdit(v.id); setModal(true); }}>Editar</button>
-            <button style={Object.assign({}, Btn(C.red), { flex: 1 })} onClick={() => remove(v.id)}>Excluir</button>
+            <button style={Object.assign({}, Ghost(C.red), { flex: 1 })} onClick={() => remove(v.id)}>Excluir</button>
           </div>
         </div>
       ))}
@@ -455,6 +475,15 @@ function Frota({ veiculos, setVeiculos, toast }) {
           <Lbl label="Status" flex={1}><select style={FI} value={form.status || "disponivel"} onChange={e => F("status", e.target.value)}><option value="disponivel">Disponivel</option><option value="alugado">Alugado</option><option value="manutencao">Manutencao</option><option value="inativo">Inativo</option></select></Lbl>
         </div>
         <Lbl label="Renavam"><input style={FI} value={form.renavam || ""} onChange={e => F("renavam", e.target.value)} /></Lbl>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Lbl label="Venc. IPVA" flex={1}><input style={FI} type="date" value={form.venc_ipva || ""} onChange={e => F("venc_ipva", e.target.value)} /></Lbl>
+          <Lbl label="Venc. Seguro" flex={1}><input style={FI} type="date" value={form.venc_seguro || ""} onChange={e => F("venc_seguro", e.target.value)} /></Lbl>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Lbl label="Venc. Licenciamento" flex={1}><input style={FI} type="date" value={form.venc_licenciamento || ""} onChange={e => F("venc_licenciamento", e.target.value)} /></Lbl>
+          <Lbl label="Venc. Revisão" flex={1}><input style={FI} type="date" value={form.venc_revisao || ""} onChange={e => F("venc_revisao", e.target.value)} /></Lbl>
+        </div>
+        <Lbl label="Sinistros / Observações"><textarea style={Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 })} value={form.sinistros || ""} onChange={e => F("sinistros", e.target.value)} placeholder="Histórico de acidentes, danos, observações..." /></Lbl>
         <UploadField label="CRV/CRLV" value={form.crv_url || ""} onChange={v => F("crv_url", v)} pasta="crv" nome={form.placa || "veiculo"} />
         <button style={Btn()} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
       </div>
@@ -503,25 +532,39 @@ function Clientes({ clientes, setClientes, contratos, toast }) {
     <input style={FI} placeholder="Buscar nome, CPF/CNPJ..." value={search} onChange={e => setSearch(e.target.value)} />
     <div style={CARD}>
       {fil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum cliente</div>}
-      {fil.map((c, i) => (
+      {fil.map((c, i) => {
+        var ctsCli = contratos.filter(x => x.cliente_id == c.id);
+        var totalContratos = ctsCli.length;
+        var inadimplentes = ctsCli.filter(x => x.status === "concluido" && x.status_pagamento !== "pago" && x.status_pagamento !== "isento").length;
+        var score = totalContratos === 0 ? null : Math.round(((totalContratos - inadimplentes) / totalContratos) * 100);
+        var scoreCor = score === null ? C.gray : score >= 90 ? C.green : score >= 70 ? C.orange : C.red;
+        return (
         <div key={c.id} style={{ padding: "13px 0", borderBottom: i < fil.length - 1 ? "1px solid " + C.border : "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{c.nome}</div>
-            {c.bloqueado && <span style={Badge(C.red)}>Bloqueado</span>}
-            {c.vencimento_cnh && c.vencimento_cnh <= hoje && <span style={Badge(C.orange)}>CNH Vencida</span>}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{c.nome}</div>
+              {c.bloqueado && <span style={Badge(C.red)}>Bloqueado</span>}
+              {c.vencimento_cnh && c.vencimento_cnh <= hoje && <span style={Badge(C.orange)}>CNH Vencida</span>}
+            </div>
+            {score !== null && <span style={Badge(scoreCor)}>{score}% adimpl.</span>}
           </div>
           <div style={{ fontSize: 12, color: C.sub }}>CPF/CNPJ: {c.cpf || "--"} · CNH: {c.cnh || "--"} {c.categoria_cnh && "(" + c.categoria_cnh + ")"}</div>
-          <div style={{ fontSize: 12, color: C.sub }}>Tel: {c.telefone || "--"}</div>
-          {c.bloqueado && c.motivo_bloqueio && <div style={{ fontSize: 12, color: C.red }}>Motivo: {c.motivo_bloqueio}</div>}
-          {c.cnh_url && <a href={c.cnh_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Ver CNH</a>}
+          <div style={{ fontSize: 12, color: C.sub }}>Tel: {c.telefone || "--"}{c.email && " · " + c.email}</div>
+          {c.bloqueado && c.motivo_bloqueio && <div style={{ fontSize: 12, color: C.red, marginTop: 2 }}>Bloqueio: {c.motivo_bloqueio}</div>}
+          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+            {c.cnh_url && <a href={c.cnh_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal }}>CNH</a>}
+            {c.rg_url && <a href={c.rg_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal }}>RG</a>}
+            {c.comprovante_url && <a href={c.comprovante_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal }}>Comprovante</a>}
+          </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-            <button style={Ghost(C.teal)} onClick={() => verHist(c)}>Historico</button>
+            <button style={Ghost()} onClick={() => verHist(c)}>Histórico</button>
             <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
-            <button style={Btn(c.bloqueado ? C.green : C.orange, true)} onClick={() => toggleBloquear(c)}>{c.bloqueado ? "Desbloquear" : "Bloquear"}</button>
-            <button style={Btn(C.red, true)} onClick={() => remove(c.id)}>✕</button>
+            <button style={Ghost()} onClick={() => toggleBloquear(c)}>{c.bloqueado ? "Desbloquear" : "Bloquear"}</button>
+            <button style={Ghost(C.red)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
     <Modal open={modal} onClose={() => setModal(false)} title={edit ? "Editar Cliente" : "Novo Cliente"}>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -541,21 +584,40 @@ function Clientes({ clientes, setClientes, contratos, toast }) {
         <Lbl label="Email"><input style={FI} type="email" value={form.email || ""} onChange={e => F("email", e.target.value)} /></Lbl>
         <Lbl label="Endereco"><input style={FI} value={form.endereco || ""} onChange={e => F("endereco", e.target.value)} /></Lbl>
         <UploadField label="Foto da CNH" value={form.cnh_url || ""} onChange={v => F("cnh_url", v)} pasta="cnh" nome={form.cpf || "cliente"} />
+        <UploadField label="Foto do RG" value={form.rg_url || ""} onChange={v => F("rg_url", v)} pasta="rg" nome={(form.cpf || "cliente") + "_rg"} />
+        <UploadField label="Comprovante de Residência" value={form.comprovante_url || ""} onChange={v => F("comprovante_url", v)} pasta="comprovantes" nome={(form.cpf || "cliente") + "_comp"} />
         <button style={Btn()} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
       </div>
     </Modal>
-    <Modal open={histModal} onClose={() => setHistModal(false)} title={"Historico - " + (histCliente && histCliente.nome || "")} wide>
+    <Modal open={histModal} onClose={() => setHistModal(false)} title={"Histórico — " + (histCliente && histCliente.nome || "")} wide>
       <div>
         {histContratos.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 20 }}>Nenhum contrato</div>}
         {histContratos.map((c, i) => (
           <div key={c.id} style={{ padding: "10px 0", borderBottom: i < histContratos.length - 1 ? "1px solid " + C.border : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div><div style={{ fontWeight: 600 }}>Contrato No {numCt(c.id)}</div><div style={{ fontSize: 12, color: C.sub }}>{fmtDate(c.data_inicio)} a {fmtDate(c.data_fim)}</div></div>
-              <div><div style={{ fontWeight: 700, color: C.green }}>{fmtBRL(c.valor_total)}</div><span style={Badge(c.status === "ativo" ? C.blue : c.status === "concluido" ? C.green : C.red)}>{c.status}</span></div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>Contrato #{numCt(c.id)}</div>
+                <div style={{ fontSize: 12, color: C.sub }}>{fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
+                {c.forma_pagamento && <div style={{ fontSize: 11, color: C.sub }}>{c.forma_pagamento}</div>}
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 600, color: C.green, fontSize: 13 }}>{fmtBRL(c.valor_total)}</div>
+                <span style={Badge(c.status === "ativo" ? C.blue : c.status === "concluido" ? C.green : C.red)}>{c.status}</span>
+                {c.status_pagamento && <div style={{ marginTop: 2 }}><span style={Badge(c.status_pagamento === "pago" ? C.green : C.orange)}>{c.status_pagamento}</span></div>}
+              </div>
             </div>
           </div>
         ))}
-        <div style={{ marginTop: 12, fontWeight: 700, color: C.blue }}>Total: {fmtBRL(histContratos.reduce((s, c) => s + parseFloat(c.valor_total || 0), 0))}</div>
+        {histContratos.length > 0 && (() => {
+          var total = histContratos.reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+          var pagos = histContratos.filter(c => c.status_pagamento === "pago").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
+          var inadimpl = histContratos.filter(c => c.status === "concluido" && c.status_pagamento !== "pago" && c.status_pagamento !== "isento").length;
+          return <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid " + C.border, display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div><div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase" }}>Total contratos</div><div style={{ fontWeight: 700, color: C.blue }}>{fmtBRL(total)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase" }}>Recebido</div><div style={{ fontWeight: 700, color: C.green }}>{fmtBRL(pagos)}</div></div>
+            <div><div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase" }}>Inadimplências</div><div style={{ fontWeight: 700, color: inadimpl > 0 ? C.red : C.green }}>{inadimpl}</div></div>
+          </div>;
+        })()}
       </div>
     </Modal>
   </div>;
@@ -635,23 +697,35 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
       valor_total: ct.valor_total, status: "ativo",
       status_pagamento: "pendente",
       forma_pagamento: ct.forma_pagamento,
-      previsao_pagamento: novaPrevPag
+      previsao_pagamento: novaPrevPag,
+      desconto: ct.desconto, acrescimo: ct.acrescimo,
+      checklist_retirada: ct.checklist_devolucao || ct.checklist_retirada,
+      checklist_devolucao: null,
+      observacoes: ct.observacoes ? "Renovação contrato #" + numCt(ct.id) + ". " + ct.observacoes : "Renovação contrato #" + numCt(ct.id)
     };
     try {
-      // Conclui o contrato original e marca como pago
-      await db.patch("contratos", ct.id, { status: "concluido", status_pagamento: ct.status_pagamento === "pago" ? "pago" : "pago" });
+      await db.patch("contratos", ct.id, { status: "concluido" });
       setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, { status: "concluido" }) : c));
-      // Cria o novo contrato (veiculo continua alugado)
       const novo = await db.post("contratos", payload);
       setContratos(p => [novo].concat(p));
-      toast("Renovado! Contrato anterior concluido. Novo No " + numCt(novo.id));
+      toast("Renovado! Novo contrato No " + numCt(novo.id));
     } catch(e) { toast("Erro ao renovar: " + e.message, "error"); }
   }
   async function concluir(ct) {
-    if (!confirm("Concluir e liberar veiculo?")) return;
-    await db.patch("contratos", ct.id, { status: "concluido" }); await db.patch("veiculos", ct.veiculo_id, { status: "disponivel" });
-    setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, { status: "concluido" }) : c)); setVeiculos(p => p.map(v => v.id == ct.veiculo_id ? Object.assign({}, v, { status: "disponivel" }) : v));
-    toast("Concluido! Veiculo liberado");
+    var kmFinal = ct.km_final || "";
+    var obs = "";
+    var kmFinalInput = prompt("KM de retorno do veículo (atual: " + (ct.km_final || "não informado") + "):", kmFinal);
+    if (kmFinalInput === null) return;
+    var obsInput = prompt("Observações do encerramento (opcional):", "");
+    if (obsInput === null) return;
+    var patchData = { status: "concluido" };
+    if (kmFinalInput) patchData.km_final = parseFloat(kmFinalInput);
+    if (obsInput) patchData.observacoes = (ct.observacoes ? ct.observacoes + "\n" : "") + "Encerramento: " + obsInput;
+    await db.patch("contratos", ct.id, patchData);
+    await db.patch("veiculos", ct.veiculo_id, { status: "disponivel" });
+    setContratos(p => p.map(c => c.id === ct.id ? Object.assign({}, c, patchData) : c));
+    setVeiculos(p => p.map(v => v.id == ct.veiculo_id ? Object.assign({}, v, { status: "disponivel" }) : v));
+    toast("Encerrado! Veículo liberado.");
   }
   const SC = { ativo: C.blue, concluido: C.green, cancelado: C.red };
   var veicsDisp = veicsDisponiveis();
@@ -735,26 +809,35 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
 
         return <div key={c.id} style={cardStyle}>
           <div style={{ marginBottom: 6 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>{cl && cl.nome || "--"}</div>
-            <div style={{ fontSize: 13, color: C.sub, marginTop: 1 }}>No {numCt(c.id)} · <span style={{ fontWeight: 800, color: "#1C1C1E" }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}</div>
-            <div style={{ fontSize: 14, color: C.sub, marginTop: 2 }}>📅 {fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
-            {c.previsao_pagamento && <div style={{ fontSize: 13, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 700 : 500, marginTop: 2 }}>
-              {pagAtrasado ? "🚨 " : "📆 "}Pagamento: {fmtDate(c.previsao_pagamento)}
+            <div style={{ fontWeight: 600, fontSize: 14, color: "#1C1C1E" }}>{cl && cl.nome || "--"}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>#{numCt(c.id)} · <span style={{ color: "#3C3C43", fontWeight: 500 }}>{ve && ve.placa || "--"}</span> {ve && ve.modelo || ""}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{fmtDate(c.data_inicio)} → {fmtDate(c.data_fim)}</div>
+            {c.previsao_pagamento && <div style={{ fontSize: 12, color: pagAtrasado ? C.red : C.sub, fontWeight: pagAtrasado ? 600 : 400, marginTop: 2 }}>
+              {pagAtrasado ? "⚠ " : ""}Pgto: {fmtDate(c.previsao_pagamento)}
             </div>}
+            {c.km_final && c.km_inicial && c.km_franquia && parseFloat(c.km_final) - parseFloat(c.km_inicial) > parseFloat(c.km_franquia) && (
+              <div style={{ fontSize: 12, color: C.orange, marginTop: 2 }}>
+                KM excedente: {(parseFloat(c.km_final) - parseFloat(c.km_inicial) - parseFloat(c.km_franquia)).toFixed(0)} km · {fmtBRL((parseFloat(c.km_final) - parseFloat(c.km_inicial) - parseFloat(c.km_franquia)) * parseFloat(c.valor_km_excedente || 0))}
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
               <span style={Badge(SC[c.status] || C.gray)}>{c.status}</span>
               <span style={Badge(spCor)}>{spLabel}</span>
             </div>
-            <div style={{ fontWeight: 800, fontSize: 17, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
           </div>
+          {c.observacoes && <div style={{ fontSize: 11, color: C.sub, marginTop: 4, fontStyle: "italic", whiteSpace: "pre-line", lineClamp: 2, overflow: "hidden", maxHeight: 34 }}>{c.observacoes}</div>}
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
             <button style={Ghost(C.sub)} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
             {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
             {isPendente && <button style={Ghost(C.sub)} onClick={async () => {
-              await db.patch("contratos", c.id, { status_pagamento: "pago" });
-              setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x));
+              var dtPag = new Date().toISOString().split("T")[0];
+              var obs = c.observacoes ? c.observacoes + "\n" : "";
+              obs += "Recebido em " + dtPag + " (" + (c.forma_pagamento || "sem forma") + ")";
+              await db.patch("contratos", c.id, { status_pagamento: "pago", observacoes: obs });
+              setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago", observacoes: obs }) : x));
               toast("✅ Pagamento registrado!");
             }}>💰 Receber</button>}
             {isPago && <button style={Ghost(C.sub)} onClick={async () => {
@@ -940,6 +1023,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
               <div style={{ fontSize: 12, color: C.sub }}>📅 Infração: {fmtDate(m.data)}{m.local && " · " + m.local}</div>
               {m.vencimento && <div style={{ fontSize: 12, color: vencida && !isPago ? C.red : C.sub, fontWeight: vencida && !isPago ? 700 : 400 }}>{vencida && !isPago ? "🚨 " : "💳 "}Vencimento: {fmtDate(m.vencimento)}</div>}
               {isPago && m.data_pagamento && <div style={{ fontSize: 12, color: C.green }}>✅ Pago em: {fmtDate(m.data_pagamento)}</div>}
+              {m.cobrado_cliente && m.cobrado_cliente !== "nao" && <div style={{ fontSize: 12, color: m.cobrado_cliente === "pago" ? C.green : C.orange }}>👤 Cliente: {m.cobrado_cliente === "pago" ? "pagou " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : "") : "pendente " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : "")}</div>}
               {m.pontos && <div style={{ fontSize: 11, color: C.sub }}>🔴 {m.pontos} pontos</div>}
               <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                 {m.auto_infracao_url && <a href={m.auto_infracao_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>Auto Infracao</a>}
@@ -978,6 +1062,10 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
           <Lbl label="Status" flex={1}><select style={FI} value={form.status || "pendente"} onChange={e => F("status", e.target.value)}><option value="pendente">Pendente</option><option value="pago">Pago</option><option value="contestado">Contestado</option></select></Lbl>
         </div>
         <Lbl label="Descricao"><input style={FI} value={form.descricao || ""} onChange={e => F("descricao", e.target.value)} /></Lbl>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Lbl label="Cobrado do Cliente?" flex={1}><select style={FI} value={form.cobrado_cliente || "nao"} onChange={e => F("cobrado_cliente", e.target.value)}><option value="nao">Não cobrado</option><option value="pendente">Pendente</option><option value="pago">Cliente pagou</option></select></Lbl>
+          <Lbl label="Valor Cobrado (R$)" flex={1}><input style={FI} type="number" step="0.01" value={form.valor_cobrado || ""} onChange={e => F("valor_cobrado", e.target.value)} placeholder="Valor repassado" /></Lbl>
+        </div>
         <UploadField label="Auto de Infracao" value={form.auto_infracao_url || ""} onChange={v => F("auto_infracao_url", v)} pasta="multas" nome={"auto_" + (form.contrato_id || "0")} />
         <UploadField label="CNH do Condutor" value={form.cnh_condutor_url || ""} onChange={v => F("cnh_condutor_url", v)} pasta="cnh_infratores" nome={"cnh_" + (form.contrato_id || "0")} />
         <button style={Btn(C.red)} onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</button>
@@ -1659,7 +1747,14 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
         </div>
-        <button style={Btn(C.green)} onClick={() => openRec(null)}>+ Receita</button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button style={Ghost(C.sub)} onClick={() => {
+            var rows = [["Data","Descricao","Categoria","Valor","Status","Recebido em"]].concat(recFiltradas.map(r => [r.data||"",r.descricao||"",r.categoria||"",r.valor||"",r.status||"",r.data_pagamento||""]));
+            var csv = rows.map(r => r.map(x => '"' + String(x).replace(/"/g,'""') + '"').join(",")).join("\n");
+            var a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv); a.download = "receitas-" + filtroMes + ".csv"; a.click();
+          }}>↓ CSV</button>
+          <button style={Btn(C.green)} onClick={() => openRec(null)}>+ Receita</button>
+        </div>
       </div>
       {/* Totalizadores */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -1719,7 +1814,14 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <input style={Object.assign({}, FI, { width: 160 })} type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)} />
         </div>
-        <button style={Btn(C.red)} onClick={() => openDesp(null)}>+ Despesa</button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button style={Ghost(C.sub)} onClick={() => {
+            var rows = [["Data","Descricao","Categoria","Valor","Status","Pago em"]].concat(despFiltradas.map(d => [d.data||"",d.descricao||"",d.categoria||"",d.valor||"",d.status||"",d.data_pagamento||""]));
+            var csv = rows.map(r => r.map(x => '"' + String(x).replace(/"/g,'""') + '"').join(",")).join("\n");
+            var a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv); a.download = "despesas-" + filtroMes + ".csv"; a.click();
+          }}>↓ CSV</button>
+          <button style={Btn(C.red)} onClick={() => openDesp(null)}>+ Despesa</button>
+        </div>
       </div>
       {/* Totalizadores */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -1910,9 +2012,9 @@ function Relatorios({ contratos, veiculos, clientes, multas, manutencoes, despes
   }
 
   return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-    <div style={{ fontSize: 24, fontWeight: 800 }}>Relatorios</div>
+    <div style={{ fontSize: 24, fontWeight: 800 }}>Relatórios</div>
     <div style={{ display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-      {["geral", "faturas"].map(x => <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray, textTransform: "capitalize" })}>{x}</button>)}
+      {[["geral","Geral"],["faturas","Faturas"],["veiculos","Por Veículo"]].map(([x,l]) => <button key={x} onClick={() => setTab(x)} style={Object.assign({}, Ghost(tab === x ? C.blue : C.gray), { background: tab === x ? C.blue : "transparent", color: tab === x ? "#fff" : C.gray })}>{l}</button>)}
     </div>
 
     {tab === "geral" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1940,31 +2042,94 @@ function Relatorios({ contratos, veiculos, clientes, multas, manutencoes, despes
 
     {tab === "faturas" && <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={CARD}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 12 }}>Filtrar por periodo</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sub, marginBottom: 12 }}>Filtrar por período</div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Lbl label="De" flex={1}><input style={FI} type="date" value={de} onChange={e => setDe(e.target.value)} /></Lbl>
-          <Lbl label="Ate" flex={1}><input style={FI} type="date" value={ate} onChange={e => setAte(e.target.value)} /></Lbl>
+          <Lbl label="Até" flex={1}><input style={FI} type="date" value={ate} onChange={e => setAte(e.target.value)} /></Lbl>
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div><span style={{ fontWeight: 700 }}>{faturasFil.length} fatura(s) </span><span style={{ fontWeight: 800, color: C.green }}>{fmtBRL(totalFaturas)}</span></div>
-        <button style={Btn(C.orange)} onClick={imprimirFaturas}>Imprimir</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={Ghost(C.sub)} onClick={() => {
+            var rows = [["No","Cliente","Veiculo","Inicio","Fim","Valor","Status","Pagamento"]].concat(faturasFil.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id); return [numCt(c.id),cl&&cl.nome||"",ve&&ve.placa||"",c.data_inicio||"",c.data_fim||"",c.valor_total||"",c.status||"",c.status_pagamento||""]; }));
+            var csv = rows.map(r => r.map(x => '"' + String(x).replace(/"/g,'""') + '"').join(",")).join("\n");
+            var a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv); a.download = "faturas.csv"; a.click();
+          }}>↓ CSV</button>
+          <button style={Btn(C.orange)} onClick={imprimirFaturas}>Imprimir</button>
+        </div>
       </div>
       <div style={CARD}>
-        {faturasFil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma fatura no periodo</div>}
+        {faturasFil.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhuma fatura no período</div>}
         {faturasFil.map((c, i) => {
           var cl = clientes.find(x => x.id == c.cliente_id); var ve = veiculos.find(x => x.id == c.veiculo_id);
           return <div key={c.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i < faturasFil.length - 1 ? "1px solid " + C.border : "none", flexWrap: "wrap", gap: 8 }}>
             <div>
-              <div style={{ fontWeight: 600 }}>No {numCt(c.id)} - {cl && cl.nome || "--"}</div>
+              <div style={{ fontWeight: 600 }}>#{numCt(c.id)} — {cl && cl.nome || "--"}</div>
               <div style={{ fontSize: 12, color: C.sub }}>{ve && ve.placa || "--"} {ve && ve.modelo || ""}</div>
-              <div style={{ fontSize: 12, color: C.sub }}>{c.data_inicio} a {c.data_fim}</div>
+              <div style={{ fontSize: 12, color: C.sub }}>{c.data_inicio} → {c.data_fim}</div>
             </div>
-            <div style={{ fontWeight: 800, color: C.green }}>{fmtBRL(c.valor_total)}</div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontWeight: 700, color: C.green }}>{fmtBRL(c.valor_total)}</div>
+              <span style={Badge(c.status_pagamento === "pago" ? C.green : C.orange)}>{c.status_pagamento || "pendente"}</span>
+            </div>
           </div>;
         })}
       </div>
     </div>}
+
+    {tab === "veiculos" && (() => {
+      var porVeiculo = veiculos.map(v => {
+        var cts = contratos.filter(c => c.veiculo_id == v.id);
+        var receita = cts.filter(c => c.status === "concluido").reduce((s,c) => s + parseFloat(c.valor_total||0), 0);
+        var receitaAtiva = cts.filter(c => c.status === "ativo").reduce((s,c) => s + parseFloat(c.valor_total||0), 0);
+        var custo = manutencoes.filter(m => m.veiculo_id == v.id).reduce((s,m) => s + parseFloat(m.custo||0), 0);
+        var nMultas = multas.filter(m => { var ct = contratos.find(c => c.id == m.contrato_id); return ct && ct.veiculo_id == v.id; }).length;
+        var totalContratos = cts.length;
+        var lucro = receita - custo;
+        return { v, receita, receitaAtiva, custo, lucro, totalContratos, nMultas };
+      }).sort((a,b) => b.receita - a.receita);
+      var maxReceita = Math.max(...porVeiculo.map(x => x.receita), 1);
+      return <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <button style={Ghost(C.sub)} onClick={() => {
+            var rows = [["Placa","Modelo","Receita","Em aberto","Custo Manutenção","Lucro","Contratos","Multas"]].concat(porVeiculo.map(x => [x.v.placa,x.v.modelo,x.receita,x.receitaAtiva,x.custo,x.lucro,x.totalContratos,x.nMultas]));
+            var csv = rows.map(r => r.map(x => '"' + String(x).replace(/"/g,'""') + '"').join(",")).join("\n");
+            var a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv); a.download = "centro-custo-veiculos.csv"; a.click();
+          }}>↓ CSV</button>
+        </div>
+        <div style={CARD}>
+          {porVeiculo.length === 0 && <div style={{ color: C.sub, textAlign: "center", padding: 30 }}>Nenhum veículo</div>}
+          {porVeiculo.map((x, i) => (
+            <div key={x.v.id} style={{ padding: "14px 0", borderBottom: i < porVeiculo.length - 1 ? "1px solid " + C.border : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{x.v.placa} <span style={{ fontWeight: 400, color: C.sub }}>— {x.v.marca} {x.v.modelo}</span></div>
+                  <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{x.totalContratos} contrato(s) · {x.nMultas} multa(s)</div>
+                </div>
+                <span style={Badge(x.lucro >= 0 ? C.green : C.red)}>{x.lucro >= 0 ? "+" : ""}{fmtBRL(x.lucro)}</span>
+              </div>
+              {/* Barra de receita */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <div style={{ fontSize: 10, color: C.sub, width: 70, flexShrink: 0 }}>Receita</div>
+                <div style={{ flex: 1, background: C.bg, borderRadius: 4, height: 8, overflow: "hidden" }}>
+                  <div style={{ height: 8, borderRadius: 4, background: C.green, width: (x.receita / maxReceita * 100) + "%" }} />
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.green, width: 80, textAlign: "right", flexShrink: 0 }}>{fmtBRL(x.receita)}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <div style={{ fontSize: 10, color: C.sub, width: 70, flexShrink: 0 }}>Manutenção</div>
+                <div style={{ flex: 1, background: C.bg, borderRadius: 4, height: 8, overflow: "hidden" }}>
+                  <div style={{ height: 8, borderRadius: 4, background: C.purple, width: (x.custo / maxReceita * 100) + "%" }} />
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.purple, width: 80, textAlign: "right", flexShrink: 0 }}>{fmtBRL(x.custo)}</div>
+              </div>
+              {x.receitaAtiva > 0 && <div style={{ fontSize: 11, color: C.orange }}>+ {fmtBRL(x.receitaAtiva)} em aberto</div>}
+            </div>
+          ))}
+        </div>
+      </div>;
+    })()}
   </div>;
 }
 
@@ -2070,7 +2235,17 @@ function Config({ empresa, setEmpresa, toast }) {
         alter table orcamento_pessoal add column if not exists prazo_recorrencia integer;<br/>
         alter table multas add column if not exists vencimento date;<br/>
         alter table multas add column if not exists data_pagamento date;<br/>
-        alter table manutencao add column if not exists data_previsao_pagamento date;
+        alter table manutencao add column if not exists data_previsao_pagamento date;<br/>
+        alter table multas add column if not exists cobrado_cliente text default 'nao';<br/>
+        alter table multas add column if not exists valor_cobrado numeric;<br/>
+        alter table veiculos add column if not exists venc_ipva date;<br/>
+        alter table veiculos add column if not exists venc_seguro date;<br/>
+        alter table veiculos add column if not exists venc_licenciamento date;<br/>
+        alter table veiculos add column if not exists venc_revisao date;<br/>
+        alter table veiculos add column if not exists sinistros text;<br/>
+        alter table clientes add column if not exists rg_url text;<br/>
+        alter table clientes add column if not exists comprovante_url text;<br/>
+        alter table contratos add column if not exists observacoes_encerramento text;
       </div>
     </div>
   </div>;
@@ -2082,7 +2257,7 @@ const TABS = [
   { id: "contratos", label: "Contratos" }, { id: "multas", label: "Multas" }, { id: "manutencao", label: "Manutencao" },
   { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatorios" }, { id: "config", label: "Config" }
 ];
-const ICONS = { inicio: "⊙", frota: "🚗", clientes: "👤", contratos: "📋", multas: "⚠️", manutencao: "🔧", financeiro: "💳", relatorios: "📊", config: "⚙️" };
+const ICONS = { inicio: "◉", frota: "◻", clientes: "○", contratos: "▤", multas: "△", manutencao: "◈", financeiro: "◇", relatorios: "▦", config: "◎" };
 
 function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState("");
@@ -2232,11 +2407,11 @@ function App() {
   if (mobile) return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 82 }}>
       <div style={{ padding: "16px 16px 0" }}>{page()}</div>
-      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,.97)", backdropFilter: "blur(20px)", borderTop: "1px solid " + C.border, display: "flex", zIndex: 100, overflowX: "auto" }}>
+      <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", borderTop: "1px solid " + C.border, display: "flex", zIndex: 100, overflowX: "auto" }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", background: "none", border: "none", padding: "8px 12px 11px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 62 }}>
-            <span style={{ fontSize: 24 }}>{ICONS[t.id]}</span>
-            <span style={{ fontSize: 9, fontWeight: 600, color: tab === t.id ? C.blue : C.gray, whiteSpace: "nowrap" }}>{t.label}</span>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", background: "none", border: "none", padding: "8px 12px 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minWidth: 60 }}>
+            <span style={{ fontSize: 16, color: tab === t.id ? C.blue : C.sub, lineHeight: 1 }}>{ICONS[t.id]}</span>
+            <span style={{ fontSize: 9, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.blue : C.sub, whiteSpace: "nowrap" }}>{t.label}</span>
           </button>
         ))}
       </nav>
@@ -2249,8 +2424,8 @@ function App() {
       <nav style={{ width: 210, background: "#FFF", borderRight: "1px solid " + C.border, padding: "26px 12px", display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: C.blue, marginBottom: 20, paddingLeft: 10 }}>AutoGest Pro</div>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ background: tab === t.id ? C.blue + "18" : "transparent", color: tab === t.id ? C.blue : "#3C3C43", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 14, fontWeight: tab === t.id ? 700 : 500, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 16 }}>{ICONS[t.id]}</span>{t.label}
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ background: tab === t.id ? C.blue + "12" : "transparent", color: tab === t.id ? C.blue : "#3C3C43", border: "none", borderRadius: 8, padding: "9px 12px", fontSize: 13, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14, color: tab === t.id ? C.blue : C.sub }}>{ICONS[t.id]}</span>{t.label}
           </button>
         ))}
       </nav>
