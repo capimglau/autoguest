@@ -264,8 +264,9 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           <div style={{ fontSize: 11, color: C.sub, marginTop: 1 }}>faturamento</div>
         </div>
         {(() => {
-          var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
-          var resultPrev = prevMes - despMesAtual;
+          var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual && !d.manutencao_id).reduce((s,d)=>s+parseFloat(d.valor||0),0);
+          var manMesAtualBanner = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
+          var resultPrev = prevMes - despMesAtual - manMesAtualBanner;
           return (
             <div style={{ borderLeft: "1px solid " + C.border, paddingLeft: 12 }}>
               <div style={{ fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>Resultado Prev.</div>
@@ -303,31 +304,22 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
 
     {/* Linha 2: Despesas | Manutenções */}
     {(() => {
-      var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual).reduce((s,d)=>s+parseFloat(d.valor||0),0);
+      var despMesAtual = despesas.filter(d => (d.data||"").slice(0,7) === mesAtual && !d.manutencao_id).reduce((s,d)=>s+parseFloat(d.valor||0),0);
       var manMesAtual = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === mesAtual).reduce((s,m)=>s+parseFloat(m.custo||0),0);
       var resultParcial = recMes - despMesAtual - manMesAtual;
       return (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
-            </div>
-            <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
-              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>🔧 Manutenções</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
-            </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Despesas</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: despMesAtual > 0 ? C.red : "#1C1C1E", marginTop: 4 }}>{fmtBRL(despMesAtual)}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>no mês</div>
           </div>
-          <div onClick={() => setTab("financeiro")} style={{ background: "#fff", borderRadius: 16, padding: "14px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Resultado Parcial</div>
-              <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>recebido − despesas − manutenções</div>
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: resultParcial >= 0 ? C.green : C.red }}>{fmtBRL(resultParcial)}</div>
+          <div onClick={() => setTab("manutencao")} style={{ background: "#fff", borderRadius: 16, padding: "16px 16px 14px", cursor: "pointer" }}>
+            <div style={{ fontSize: 11, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>🔧 Manutenções</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: manMesAtual > 0 ? C.purple : "#1C1C1E", marginTop: 4 }}>{fmtBRL(manMesAtual)}</div>
+            <div style={{ fontSize: 12, color: C.sub, marginTop: 2 }}>{manutencoes.filter(m=>(m.data_entrada||"").slice(0,7)===mesAtual).length} registro(s)</div>
           </div>
-        </>
+        </div>
       );
     })()}
 
@@ -758,21 +750,21 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
             <div style={{ fontWeight: 800, fontSize: 17, color: isPago ? C.green : "#1C1C1E" }}>{fmtBRL(c.valor_total)}</div>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-            <button style={Ghost()} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
+            <button style={Ghost(C.sub)} onClick={() => { setForm(Object.assign({}, c)); setEdit(c.id); setModal(true); }}>Editar</button>
             {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => renovar(c)}>🔄 Renovar</button>}
-            {isPendente && <button style={Ghost(C.green)} onClick={async () => {
+            {isPendente && <button style={Ghost(C.sub)} onClick={async () => {
               await db.patch("contratos", c.id, { status_pagamento: "pago" });
               setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pago" }) : x));
               toast("✅ Pagamento registrado!");
             }}>💰 Receber</button>}
-            {isPago && <button style={Ghost(C.red)} onClick={async () => {
+            {isPago && <button style={Ghost(C.sub)} onClick={async () => {
               if (!confirm("Reverter pagamento para 'a receber'?")) return;
               await db.patch("contratos", c.id, { status_pagamento: "pendente" });
               setContratos(p => p.map(x => x.id === c.id ? Object.assign({}, x, { status_pagamento: "pendente" }) : x));
               toast("↩ Pagamento revertido");
             }}>↩ Reverter pgto</button>}
             {c.status === "ativo" && <button style={Ghost(C.sub)} onClick={() => concluir(c)}>Encerrar</button>}
-            {c.status === "concluido" && <button style={Ghost(C.orange)} onClick={async () => {
+            {c.status === "concluido" && <button style={Ghost(C.sub)} onClick={async () => {
               if (!confirm("Reabrir contrato como ativo?")) return;
               await db.patch("contratos", c.id, { status: "ativo" });
               await db.patch("veiculos", c.veiculo_id, { status: "alugado" });
@@ -782,7 +774,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
             }}>↩ Reabrir</button>}
             <button style={Ghost(C.sub)} onClick={() => printContrato(c, cl, ve, empresa)}>Contrato</button>
             <button style={Ghost(C.sub)} onClick={() => printFatura(c, cl, ve, empresa)}>Fatura</button>
-            <button style={Ghost(C.red)} onClick={() => remove(c.id)}>✕</button>
+            <button style={Ghost(C.sub)} onClick={() => remove(c.id)}>✕</button>
           </div>
         </div>;
       })}
@@ -1520,17 +1512,18 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   var receitaContratos = contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").reduce((s, c) => s + parseFloat(c.valor_total || 0), 0);
   var receitaManual = receitas.reduce((s, r) => s + parseFloat(r.valor || 0), 0);
   var totalReceita = receitaContratos + receitaManual;
-  var totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
+  var totalDesp = despesas.filter(d => !d.manutencao_id).reduce((s, d) => s + parseFloat(d.valor || 0), 0);
   var totalMan = manutencoes.reduce((s, m) => s + parseFloat(m.custo || 0), 0);
-  var lucro = totalReceita - totalDesp - totalMan;
+  var totalMultas = multas.filter(m => m.status === "pago").reduce((s,m) => s + parseFloat(m.valor||0), 0);
+  var lucro = totalReceita - totalDesp - totalMan - totalMultas;
 
   // Filtros por mês (abas despesas/receitas)
   var despFiltradas = despesas.filter(d => despesaVisivelNoMes(d, filtroMes));
   var recFiltradas = receitas.filter(r => receitaVisivelNoMes(r, filtroMes));
 
   // Fluxo de caixa por mês
-  var desByMes = {}; despesas.forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (mes) { if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); } });
-  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes && !despesas.find(d => String(d.manutencao_id) === String(m.id))) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
+  var desByMes = {}; despesas.filter(d => !d.manutencao_id).forEach(function(d) { var mes = (d.data || "").slice(0, 7); if (mes) { if (!desByMes[mes]) desByMes[mes] = 0; desByMes[mes] += parseFloat(d.valor || 0); } });
+  var manByMes = {}; manutencoes.forEach(function(m) { var mes = (m.data_entrada || "").slice(0, 7); if (mes) { if (!manByMes[mes]) manByMes[mes] = 0; manByMes[mes] += parseFloat(m.custo || 0); } });
   var multaByMes = {}; multas.forEach(function(m) { var mes = (m.data || "").slice(0, 7); if (mes) { if (!multaByMes[mes]) multaByMes[mes] = 0; multaByMes[mes] += parseFloat(m.valor || 0); } });
   var recByMes = {};
   contratos.filter(c => c.status === "concluido" || c.status_pagamento === "pago").forEach(function(c) {
@@ -1547,14 +1540,15 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
   var recMesPendente = recMesContratos.filter(c => c.status_pagamento !== "pago" && c.status_pagamento !== "isento").reduce((s,c) => s+parseFloat(c.valor_total||0),0);
   var recMesManual = receitas.filter(r => (r.data||"").slice(0,7) === filtroResumoMes).reduce((s,r) => s+parseFloat(r.valor||0),0);
 
-  // Despesas do mês (inclui as de categoria Manutencao que vieram da integração)
-  var despMes = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes)).reduce((s,d) => s+parseFloat(d.valor||0),0);
-  var despMesPago = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status === "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
-  var despMesPendente = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && d.status !== "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
-  // Manutenções SEM despesa vinculada (para não contar duas vezes)
-  var manSemDesp = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes && !despesas.find(d => String(d.manutencao_id) === String(m.id)));
-  var manMes = manSemDesp.reduce((s,m) => s+parseFloat(m.custo||0),0);
-  var manMesPago = manSemDesp.filter(m => m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
+  // Despesas do mês — EXCLUI as geradas automaticamente por manutenção (evita dupla contagem)
+  var despMes = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id).reduce((s,d) => s+parseFloat(d.valor||0),0);
+  var despMesPago = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id && d.status === "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
+  var despMesPendente = despesas.filter(d => despesaVisivelNoMes(d, filtroResumoMes) && !d.manutencao_id && d.status !== "pago").reduce((s,d) => s+parseFloat(d.valor||0),0);
+  // Manutenções — sempre direto da tabela manutencoes, usando data_entrada como referência de mês
+  var manMesAll = manutencoes.filter(m => (m.data_entrada||"").slice(0,7) === filtroResumoMes);
+  var manMes = manMesAll.reduce((s,m) => s+parseFloat(m.custo||0),0);
+  var manMesPago = manMesAll.filter(m => m.status_financeiro === "pago").reduce((s,m) => s+parseFloat(m.custo||0),0);
+  var manMesPendente = manMes - manMesPago;
   // Multas do mês
   var multasMes = multas.filter(m => (m.data||"").slice(0,7) === filtroResumoMes);
   var multasMesPago = multasMes.filter(m => m.status === "pago").reduce((s,m) => s+parseFloat(m.valor||0),0);
@@ -1609,9 +1603,9 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           { label: "Despesas previstas", val: despMes, color: C.sub },
           { label: "✅ Despesas pagas", val: despMesPago, color: C.red },
           { label: "⏳ Despesas a pagar", val: despMesPendente, color: C.orange },
-          { label: "🔧 Manutenções (sem desp. vinc.)", val: manMes, color: C.sub },
+          { label: "🔧 Manutenções previstas", val: manMes, color: C.sub },
           { label: "✅ Manutenções pagas", val: manMesPago, color: C.purple },
-          { label: "⏳ Manutenções a pagar", val: manMes - manMesPago, color: C.orange },
+          { label: "⏳ Manutenções a pagar", val: manMesPendente, color: C.orange },
           { label: "⚠️ Multas do mês", val: multasMesTotal, color: C.sub },
           { label: "✅ Multas pagas", val: multasMesPago, color: C.red },
           { label: "⏳ Multas pendentes", val: multasMesPendente, color: C.orange },
@@ -1644,8 +1638,8 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           { label: "Outras Receitas", val: receitaManual, color: C.green },
           { label: "(-) Despesas Operacionais", val: -totalDesp, color: C.red },
           { label: "(-) Custo de Manutencao", val: -totalMan, color: C.red },
-          { label: "(-) Multas Pagas", val: -multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0), color: C.red },
-          { label: "= Resultado Liquido", val: lucro - multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0), color: (lucro - multas.filter(m=>m.status==="pago").reduce((s,m)=>s+parseFloat(m.valor||0),0)) >= 0 ? C.green : C.red, bold: true },
+          { label: "(-) Multas Pagas", val: -totalMultas, color: C.red },
+          { label: "= Resultado Liquido", val: lucro, color: lucro >= 0 ? C.green : C.red, bold: true },
         ].map((row, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: i < 5 ? "1px solid " + C.border : "none" }}>
             <span style={{ fontWeight: row.bold ? 800 : 500, fontSize: row.bold ? 15 : 14 }}>{row.label}</span>
