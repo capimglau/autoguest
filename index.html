@@ -225,19 +225,18 @@ input[type=file]{display:none}
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 6px;
+  padding: 5px 6px;
   justify-content: flex-start;
   border-radius: 28px;
-  background: linear-gradient(160deg, rgba(255,255,255,0.72) 0%, rgba(235,242,255,0.58) 100%);
-  backdrop-filter: blur(40px) saturate(2.2) brightness(1.06);
-  -webkit-backdrop-filter: blur(40px) saturate(2.2) brightness(1.06);
-  border: 0.5px solid rgba(255,255,255,0.88);
+  /* Apple Music iOS 26 — etéreo, só blur */
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(52px) saturate(1.6) brightness(1.04);
+  -webkit-backdrop-filter: blur(52px) saturate(1.6) brightness(1.04);
+  border: 0.5px solid rgba(255,255,255,0.28);
   box-shadow:
-    0 2px 0 rgba(255,255,255,0.92) inset,
-    0 -1px 0 rgba(0,0,0,0.05) inset,
-    0 8px 32px rgba(60,80,180,0.16),
-    0 2px 8px rgba(0,0,0,0.10),
-    0 0 0 0.5px rgba(200,210,240,0.30);
+    0 1px 0 rgba(255,255,255,0.30) inset,
+    0 4px 16px rgba(0,0,0,0.06),
+    0 1px 4px rgba(0,0,0,0.04);
   position: relative;
   pointer-events: all;
   overflow: hidden;
@@ -245,9 +244,9 @@ input[type=file]{display:none}
 .lg-nav-pill::before {
   content: '';
   position: absolute;
-  top: 0; left: 8%; right: 8%;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0) 100%);
+  top: 0; left: 10%; right: 10%;
+  height: 40%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 100%);
   border-radius: 0 0 50% 50%;
   pointer-events: none;
 }
@@ -268,14 +267,13 @@ input[type=file]{display:none}
   -webkit-tap-highlight-color: transparent;
 }
 .lg-nav-btn:active {
-  background: rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.20);
 }
 .lg-nav-btn-active {
-  background: linear-gradient(160deg, rgba(255,255,255,0.90) 0%, rgba(220,232,255,0.75) 100%);
+  background: rgba(255,255,255,0.30);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.95) inset,
-    0 2px 8px rgba(0,122,255,0.18),
-    0 0 0 0.5px rgba(0,122,255,0.15);
+    0 1px 0 rgba(255,255,255,0.50) inset,
+    0 0 0 0.5px rgba(255,255,255,0.35);
 }
 </style>
 <script>(function(){
