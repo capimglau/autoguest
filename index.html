@@ -14304,6 +14304,14 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
 }
 
 // -- MULTAS ----------------------------------------------------------------─
+var NOTIF_STATUS = [
+  { id: "nao_notificado", label: "Não Notificado", cor: "#8E8E93", emoji: "○" },
+  { id: "enviada",        label: "Enviada",         cor: "#32ADE6", emoji: "📤" },
+  { id: "aguardando",     label: "Aguard. Cliente", cor: "#FF9500", emoji: "⏳" },
+  { id: "notificado",     label: "Notificado",      cor: "#34C759", emoji: "✅" },
+  { id: "nao_localizou",  label: "Não Localizou",   cor: "#FF3B30", emoji: "❌" }
+];
+
 function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
@@ -14315,11 +14323,22 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
   const [filDe, setFilDe] = useState("");
   const [filAte, setFilAte] = useState("");
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [filterNotif, setFilterNotif] = useState("todos");
+
+  async function notificar(m, novoStatus) {
+    var dt = novoStatus === "nao_notificado" ? null : new Date().toISOString().split("T")[0];
+    await db.patch("multas", m.id, { status_notificacao: novoStatus, data_notificacao: novoStatus !== "nao_notificado" ? (m.data_notificacao || dt) : null });
+    setMultas(p => p.map(x => x.id === m.id ? Object.assign({}, x, { status_notificacao: novoStatus, data_notificacao: novoStatus !== "nao_notificado" ? (x.data_notificacao || dt) : null }) : x));
+    var ns = NOTIF_STATUS.find(function(n){return n.id===novoStatus;});
+    toast((ns ? ns.emoji + " " : "") + "Notificação: " + (ns ? ns.label : novoStatus));
+  }
+
   function getCt(id) { return contratos.find(c => c.id == id); }
   function getCl(id) { return clientes.find(c => c.id == id); }
   function getVeByContrato(contrato_id) { var ct = getCt(contrato_id); return ct ? veiculos.find(v => v.id == ct.veiculo_id) : null; }
   const fil = multas.filter(m => {
     if (filter !== "todos" && m.status !== filter) return false;
+    if (filterNotif !== "todos" && (m.status_notificacao || "nao_notificado") !== filterNotif) return false;
     if (filDe && m.data && m.data < filDe) return false;
     if (filAte && m.data && m.data > filAte) return false;
     if (filCliente) { var ct = getCt(m.contrato_id); if (!ct || String(ct.cliente_id) !== filCliente) return false; }
@@ -14378,9 +14397,24 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
         , temFiltro && React.createElement('button', { className: bCls(Ghost(C.red)), style: bStyle(Ghost(C.red)), onClick: limparFiltros, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1311}}, "Limpar filtros" )
       )
     )
-    , React.createElement('div', { style: { display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", alignItems: "center", paddingBottom: 2 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1314}}
-      , ["todos", "pendente", "pago", "contestado"].map(x => React.createElement('button', { key: x, onClick: () => setFilter(x), className: "lg-pill lg-pill-sm " + (filter === x ? "lg-blue" : "lg-ghost"), style: { fontWeight: 300, textTransform: "capitalize", flexShrink: 0 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1315}}, x))
-      , React.createElement('span', { style: { marginLeft: "auto", fontWeight: 700, color: C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1316}}, fmtBRL(total))
+    , React.createElement('div', { style: { display: "flex", gap: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", alignItems: "center", paddingBottom: 2 } },
+      React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: C.sub, flexShrink: 0 } }, "PGTO"),
+      ["todos", "pendente", "pago", "contestado"].map(function(x) {
+        return React.createElement('button', { key: x, onClick: function(){setFilter(x);}, className: "lg-pill lg-pill-sm " + (filter === x ? "lg-blue" : "lg-ghost"), style: { fontWeight: 300, textTransform: "capitalize", flexShrink: 0 } }, x);
+      }),
+      React.createElement('span', { style: { marginLeft: "auto", fontWeight: 700, color: C.red, flexShrink: 0 } }, fmtBRL(total))
+    )
+    , React.createElement('div', { style: { display: "flex", gap: 6, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", alignItems: "center", paddingBottom: 2 } },
+      React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: C.sub, flexShrink: 0 } }, "NOTIF."),
+      [{ id: "todos", label: "Todos", cor: C.sub }].concat(NOTIF_STATUS).map(function(ns) {
+        var ativo = filterNotif === ns.id;
+        return React.createElement('button', { key: ns.id, onClick: function(){setFilterNotif(ns.id);},
+          style: { flexShrink: 0, padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: ativo ? 700 : 400,
+            background: ativo ? ns.cor : "rgba(0,0,0,0.05)", color: ativo ? "#fff" : ns.cor || "#8E8E93",
+            transition: "all .15s" } },
+          (ns.emoji ? ns.emoji + " " : "") + ns.label
+        );
+      })
     )
     , React.createElement('div', { className: "lg-card", style: CARD, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1318}}
       , fil.length === 0 && React.createElement('div', { style: { color: C.sub, textAlign: "center", padding: 30 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1319}}, "Nenhuma multa" )
@@ -14400,8 +14434,9 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
               , React.createElement('div', { style: { fontSize: 13, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1333}}, "👤 " , cl && cl.nome || "--", " · 🚗 "   , ve && ve.placa || "--")
               , React.createElement('div', { style: { fontSize: 12, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1334}}, "📅 Infração: "  , fmtDate(m.data), m.local && " · " + m.local)
               , m.vencimento && React.createElement('div', { style: { fontSize: 12, color: vencida && !isPago ? C.red : C.sub, fontWeight: vencida && !isPago ? 700 : 400 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1335}}, vencida && !isPago ? "🚨 " : "💳 ", "Vencimento: " , fmtDate(m.vencimento))
-              , isPago && m.data_pagamento && React.createElement('div', { style: { fontSize: 12, color: C.green }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1336}}, "✅ Pago em: "   , fmtDate(m.data_pagamento))
-              , m.cobrado_cliente && m.cobrado_cliente !== "nao" && React.createElement('div', { style: { fontSize: 12, color: m.cobrado_cliente === "pago" ? C.green : C.orange }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1337}}, "👤 Cliente: "  , m.cobrado_cliente === "pago" ? "pagou " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : "") : "pendente " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : ""))
+              , isPago && m.data_pagamento && React.createElement('div', { style: { fontSize: 12, color: C.green } }, "✅ Pago em: ", fmtDate(m.data_pagamento))
+              , m.data_notificacao && React.createElement('div', { style: { fontSize: 12, color: C.teal } }, "📤 Notificado em: ", fmtDate(m.data_notificacao))
+              , m.cobrado_cliente && m.cobrado_cliente !== "nao" && React.createElement('div', { style: { fontSize: 12, color: m.cobrado_cliente === "pago" ? C.green : C.orange } }, "👤 Cliente: ", m.cobrado_cliente === "pago" ? "pagou " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : "") : "pendente " + (m.valor_cobrado ? fmtBRL(m.valor_cobrado) : ""))
               , m.pontos && React.createElement('div', { style: { fontSize: 11, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1338}}, "🔴 " , m.pontos, " pontos" )
               , React.createElement('div', { style: { display: "flex", gap: 10, marginTop: 4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1339}}
                 , m.auto_infracao_url && React.createElement('a', { href: m.auto_infracao_url, target: "_blank", rel: "noreferrer", style: { fontSize: 12, color: C.teal, fontWeight: 600 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1340}}, "Auto Infracao" )
@@ -14410,15 +14445,34 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
             )
             , React.createElement('div', { style: { textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1344}}
               , React.createElement('div', { style: { fontWeight: 800, fontSize: 17, color: isPago ? C.green : vencida ? C.red : C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1345}}, fmtBRL(m.valor))
-              , React.createElement('span', { style: Badge(SC[m.status] || C.gray), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1346}}, m.status)
-              , vencida && !isPago && React.createElement('span', { style: Badge(C.red), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1347}}, "🚨 vencida" )
+              , React.createElement('span', { style: Badge(SC[m.status] || C.gray) }, m.status)
+              , vencida && !isPago && React.createElement('span', { style: Badge(C.red) }, "🚨 vencida")
+              , (function() {
+                  var ns = NOTIF_STATUS.find(function(n){return n.id===(m.status_notificacao||"nao_notificado");}) || NOTIF_STATUS[0];
+                  return React.createElement('span', { style: Object.assign({}, Badge(ns.cor), { cursor: "default" }) }, ns.emoji + " " + ns.label);
+                })()
             )
           )
-          , React.createElement('div', { style: { display: "flex", gap: 6, marginTop: 10, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1350}}
-            , !isPago && React.createElement('button', { className: bCls(Ghost(C.green)), style: bStyle(Ghost(C.green)), onClick: () => pagar(m), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1351}}, "💰 Pagar" )
-            , isPago && React.createElement('button', { className: bCls(Ghost(C.red)), style: bStyle(Ghost(C.red)), onClick: () => reverterMulta(m), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1352}}, "↩ Reverter" )
-            , React.createElement('button', { className: bCls(Ghost()), style: bStyle(Ghost()), onClick: () => { setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1353}}, "Editar")
-            , React.createElement('button', { className: bCls(Ghost(C.red)), style: bStyle(Ghost(C.red)), onClick: () => remove(m.id), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1354}}, "✕")
+          , React.createElement('div', { style: { display: "flex", gap: 6, marginTop: 8, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2 } },
+            !isPago && React.createElement('button', { className: bCls(Ghost(C.green)), style: bStyle(Ghost(C.green)), onClick: function(){pagar(m);} }, "💰 Pagar"),
+            isPago && React.createElement('button', { className: bCls(Ghost(C.red)), style: bStyle(Ghost(C.red)), onClick: function(){reverterMulta(m);} }, "↩ Reverter"),
+            React.createElement('button', { className: bCls(Ghost()), style: bStyle(Ghost()), onClick: function(){ setForm(Object.assign({}, m)); setEdit(m.id); setModal(true); } }, "Editar"),
+            React.createElement('button', { className: bCls(Ghost(C.red)), style: bStyle(Ghost(C.red)), onClick: function(){remove(m.id);} }, "✕")
+          )
+          , React.createElement('div', { style: { display: "flex", gap: 5, marginTop: 4, overflowX: "auto", flexWrap: "nowrap", WebkitOverflowScrolling: "touch", paddingBottom: 2, alignItems: "center" } },
+            React.createElement('span', { style: { fontSize: 10, fontWeight: 700, color: C.sub, flexShrink: 0, marginRight: 2 } }, "NOTIF:"),
+            NOTIF_STATUS.map(function(ns) {
+              var ativo = (m.status_notificacao || "nao_notificado") === ns.id;
+              return React.createElement('button', { key: ns.id,
+                onClick: function(){ notificar(m, ns.id); },
+                style: { flexShrink: 0, padding: "3px 9px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 11, fontWeight: ativo ? 700 : 400,
+                  background: ativo ? ns.cor : "rgba(0,0,0,0.05)",
+                  color: ativo ? "#fff" : ns.cor,
+                  transition: "all .15s",
+                  opacity: ativo ? 1 : 0.75 } },
+                ns.emoji + " " + ns.label
+              );
+            })
           )
         );
       })
@@ -14437,9 +14491,18 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1371}}
           , React.createElement(Lbl, { label: "Local", flex: 2, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1372}}, React.createElement('input', { style: FI, value: form.local || "", onChange: e => F("local", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1372}} ))
-          , React.createElement(Lbl, { label: "Status", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1373}}, React.createElement('select', { style: FI, value: form.status || "pendente", onChange: e => F("status", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1373}}, React.createElement('option', { value: "pendente", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1373}}, "Pendente"), React.createElement('option', { value: "pago", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1373}}, "Pago"), React.createElement('option', { value: "contestado", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1373}}, "Contestado")))
+          , React.createElement(Lbl, { label: "Status Pgto", flex: 1 }, React.createElement('select', { style: FI, value: form.status || "pendente", onChange: function(e){F("status",e.target.value);} },
+              React.createElement('option', { value: "pendente" }, "Pendente"),
+              React.createElement('option', { value: "pago" }, "Pago"),
+              React.createElement('option', { value: "contestado" }, "Contestado")))
         )
-        , React.createElement(Lbl, { label: "Descricao", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1375}}, React.createElement('input', { style: FI, value: form.descricao || "", onChange: e => F("descricao", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1375}} ))
+        , React.createElement('div', { style: { display: "flex", gap: 10 } },
+          React.createElement(Lbl, { label: "Status Notificação", flex: 2 }, React.createElement('select', { style: FI, value: form.status_notificacao || "nao_notificado", onChange: function(e){F("status_notificacao",e.target.value);} },
+            NOTIF_STATUS.map(function(ns){ return React.createElement('option', { key: ns.id, value: ns.id }, ns.emoji + " " + ns.label); })
+          )),
+          React.createElement(Lbl, { label: "Data Notificação", flex: 1 }, React.createElement('input', { style: FI, type: "date", value: form.data_notificacao || "", onChange: function(e){F("data_notificacao",e.target.value);} }))
+        )
+        , React.createElement(Lbl, { label: "Descricao" }, React.createElement('input', { style: FI, value: form.descricao || "", onChange: function(e){F("descricao",e.target.value);} }))
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1376}}
           , React.createElement(Lbl, { label: "Cobrado do Cliente?"  , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1377}}, React.createElement('select', { style: FI, value: form.cobrado_cliente || "nao", onChange: e => F("cobrado_cliente", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1377}}, React.createElement('option', { value: "nao", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1377}}, "Não cobrado" ), React.createElement('option', { value: "pendente", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1377}}, "Pendente"), React.createElement('option', { value: "pago", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1377}}, "Cliente pagou" )))
           , React.createElement(Lbl, { label: "Valor Cobrado (R$)"  , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1378}}, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor_cobrado || "", onChange: e => F("valor_cobrado", e.target.value), placeholder: "Valor repassado" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1378}} ))
@@ -16115,6 +16178,8 @@ function Config({ empresa, setEmpresa, toast }) {
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3013}}), "alter table manutencao add column if not exists data_previsao_pagamento date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3014}}), "alter table multas add column if not exists cobrado_cliente text default 'nao';"
                    , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists valor_cobrado numeric;"
+                 , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists status_notificacao text default 'nao_notificado';"
+                 , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists data_notificacao date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3016}}), "alter table veiculos add column if not exists venc_ipva date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3017}}), "alter table veiculos add column if not exists venc_seguro date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3018}}), "alter table veiculos add column if not exists venc_licenciamento date;"
@@ -16138,6 +16203,8 @@ function Config({ empresa, setEmpresa, toast }) {
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3036}}), "alter table contratos add column if not exists combustivel_dev text;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3037}}), "alter table multas add column if not exists cobrado_cliente text default 'nao';"
                    , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3038}}), "alter table multas add column if not exists valor_cobrado numeric;"
+                 , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists status_notificacao text default 'nao_notificado';"
+                 , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists data_notificacao date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3039}}), "alter table veiculos add column if not exists venc_ipva date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3040}}), "alter table veiculos add column if not exists venc_seguro date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3041}}), "alter table veiculos add column if not exists venc_licenciamento date;"
@@ -16288,7 +16355,8 @@ function NavIcon({ id, active }) {
 const TABS = [
   { id: "inicio", label: "Início" }, { id: "frota", label: "Frota" }, { id: "clientes", label: "Clientes" },
   { id: "contratos", label: "Contratos" }, { id: "multas", label: "Multas" }, { id: "manutencao", label: "Manutenção" },
-  { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatórios" }, { id: "config", label: "Config" }
+  { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatórios" },
+  { id: "calendario", label: "Calendário" }, { id: "config", label: "Config" }
 ];
 const ICONS = {
   inicio:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/><\/svg>',
@@ -16299,8 +16367,315 @@ const ICONS = {
   manutencao: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/><\/svg>',
   financeiro: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2m-3-7h4.5a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3H13m-1 0v2"/><\/svg>',
   relatorios: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13m4 4V9m4 8v-5"/><\/svg>',
-  config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><\/svg>'
+  config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><\/svg>',
+  calendario: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/><\/svg>'
 };
+
+
+function Calendario({ contratos, multas, veiculos, clientes, contas, despesas, receitas, setTab }) {
+  var hoje = new Date().toISOString().split("T")[0];
+  var now = new Date();
+
+  var _m = React.useState(new Date(now.getFullYear(), now.getMonth(), 1));
+  var mesBase = _m[0], setMesBase = _m[1];
+  var _s = React.useState(hoje);
+  var diaSel = _s[0], setDiaSel = _s[1];
+  var _op = React.useState([]);
+  var orcItens = _op[0], setOrcItens = _op[1];
+
+  React.useEffect(function() {
+    db.get("orcamento_pessoal").then(function(d) { setOrcItens(d || []); }).catch(function() {});
+  }, []);
+
+  var ano = mesBase.getFullYear();
+  var mes = mesBase.getMonth();
+
+  function prevMes() { setMesBase(new Date(ano, mes - 1, 1)); setDiaSel(null); }
+  function nextMes() { setMesBase(new Date(ano, mes + 1, 1)); setDiaSel(null); }
+  function irHoje()  { setMesBase(new Date(now.getFullYear(), now.getMonth(), 1)); setDiaSel(hoje); }
+
+  function fmtV(v) { var n=parseFloat(v||0); return "R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2}); }
+  function fmtD(d) { if (!d) return "--"; var p=d.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+  function strData(d) { var p=d.split("-"); return p[2]+"/"+p[1]; }
+
+  // Monta lista de todos os eventos
+  var eventos = [];
+
+  // CONTRATOS — vencimento do período
+  (contratos || []).forEach(function(c) {
+    if (!c.data_fim || c.status === "cancelado") return;
+    var cl = (clientes||[]).find(function(x){return x.id==c.cliente_id;});
+    var ve = (veiculos||[]).find(function(x){return x.id==c.veiculo_id;});
+    var renovadoMarcado = (contratos||[]).some(function(f){
+      return f.id !== c.id && String(f.cliente_id)===String(c.cliente_id) &&
+             String(f.veiculo_id)===String(c.veiculo_id) && f.data_inicio===c.data_fim;
+    });
+    if (renovadoMarcado) return;
+    eventos.push({
+      data: c.data_fim, tipo: "contrato",
+      cor: c.data_fim < hoje ? "#FF3B30" : "#007AFF",
+      emoji: "📋",
+      titulo: "Venc. Contrato #" + ("00000"+c.id).slice(-5),
+      sub: (cl&&cl.nome||"--") + " · " + (ve&&ve.placa||"--") + " " + (ve&&ve.modelo||""),
+      tab: "contratos"
+    });
+  });
+
+  // CONTRATOS — previsão de pagamento
+  (contratos || []).forEach(function(c) {
+    if (!c.previsao_pagamento || c.status_pagamento === "pago" || c.status_pagamento === "isento") return;
+    var cl = (clientes||[]).find(function(x){return x.id==c.cliente_id;});
+    var ve = (veiculos||[]).find(function(x){return x.id==c.veiculo_id;});
+    eventos.push({
+      data: c.previsao_pagamento, tipo: "pagamento",
+      cor: c.previsao_pagamento < hoje ? "#FF3B30" : "#FF9500",
+      emoji: "💰",
+      titulo: "Pgto Contrato #" + ("00000"+c.id).slice(-5) + " · " + fmtV(c.valor_total),
+      sub: (cl&&cl.nome||"--") + " · " + (ve&&ve.placa||"--") + (c.recorrente ? " · ↻ Recorrente" : ""),
+      tab: "contratos"
+    });
+  });
+
+  // MULTAS — vencimento
+  (multas || []).forEach(function(m) {
+    if (!m.vencimento || m.status === "pago") return;
+    var ve = (veiculos||[]).find(function(x){return x.id==m.veiculo_id;});
+    var cl = (clientes||[]).find(function(x){return x.id==m.cliente_id;});
+    eventos.push({
+      data: m.vencimento, tipo: "multa",
+      cor: m.vencimento < hoje ? "#FF3B30" : "#FF9500",
+      emoji: "⚠️",
+      titulo: "Multa " + (m.tipo||"") + " · " + (ve&&ve.placa||"--") + " · " + fmtV(m.valor),
+      sub: (cl&&cl.nome||"--") + (m.descricao ? " · " + m.descricao : "") + " · AIT #" + ("00000"+m.id).slice(-5),
+      tab: "multas"
+    });
+  });
+
+  // VEÍCULOS — documentos
+  (veiculos || []).forEach(function(v) {
+    [
+      { campo: v.venc_ipva,          emoji: "📄", nome: "IPVA",          cor: "#AF52DE" },
+      { campo: v.venc_seguro,        emoji: "🛡️", nome: "Seguro",         cor: "#32ADE6" },
+      { campo: v.venc_licenciamento, emoji: "🪪",  nome: "Licenciamento",  cor: "#5856D6" },
+      { campo: v.venc_revisao,       emoji: "🔧", nome: "Revisão",        cor: "#FF9500" }
+    ].forEach(function(d) {
+      if (!d.campo) return;
+      eventos.push({
+        data: d.campo, tipo: "veiculo",
+        cor: d.campo < hoje ? "#FF3B30" : d.cor,
+        emoji: d.emoji,
+        titulo: "Venc. " + d.nome + " · " + (v.placa||"--"),
+        sub: (v.marca||"") + " " + (v.modelo||"") + (v.ano ? " · " + v.ano : ""),
+        tab: "frota"
+      });
+    });
+  });
+
+  // CNH — clientes
+  (clientes || []).forEach(function(cl) {
+    if (!cl.vencimento_cnh) return;
+    eventos.push({
+      data: cl.vencimento_cnh, tipo: "cnh",
+      cor: cl.vencimento_cnh < hoje ? "#FF3B30" : "#FF9500",
+      emoji: "🪪",
+      titulo: "Venc. CNH · " + (cl.nome||"--"),
+      sub: "Cat. " + (cl.categoria_cnh||"--") + " · CNH " + (cl.cnh||"--"),
+      tab: "clientes"
+    });
+  });
+
+  // CONTAS — a pagar / a receber
+  (contas || []).forEach(function(c) {
+    if (!c.vencimento || c.status === "pago") return;
+    var isRec = c.tipo === "receber";
+    eventos.push({
+      data: c.vencimento, tipo: "conta",
+      cor: c.vencimento < hoje ? "#FF3B30" : (isRec ? "#34C759" : "#FF3B30"),
+      emoji: isRec ? "📥" : "📤",
+      titulo: (isRec ? "A Receber" : "A Pagar") + " · " + (c.descricao||"--") + " · " + fmtV(c.valor),
+      sub: (c.categoria||"") + (c.observacoes ? " · " + c.observacoes : ""),
+      tab: "financeiro"
+    });
+  });
+
+  // DESPESAS operacionais
+  (despesas || []).forEach(function(d) {
+    if (!d.data || d.status === "pago") return;
+    eventos.push({
+      data: d.data, tipo: "despesa",
+      cor: d.data < hoje ? "#FF3B30" : "#FF3B30",
+      emoji: "📤",
+      titulo: "Despesa · " + (d.descricao||"--") + " · " + fmtV(d.valor),
+      sub: (d.categoria||"") + (d.observacoes ? " · " + d.observacoes : ""),
+      tab: "financeiro"
+    });
+  });
+
+  // RECEITAS operacionais (avulsas)
+  (receitas || []).forEach(function(r) {
+    if (!r.data) return;
+    eventos.push({
+      data: r.data, tipo: "receita",
+      cor: "#34C759",
+      emoji: "📥",
+      titulo: "Receita · " + (r.descricao||"--") + " · " + fmtV(r.valor),
+      sub: (r.categoria||"") + (r.forma_pagamento ? " · " + r.forma_pagamento : ""),
+      tab: "financeiro"
+    });
+  });
+
+  // ORÇAMENTO PESSOAL
+  orcItens.forEach(function(it) {
+    var data = it.data || (it.mes ? it.mes + "-01" : null);
+    if (!data || it.status === "pago" || it.status === "recebido") return;
+    var isDespesa = it.tipo === "despesa" || !it.tipo;
+    eventos.push({
+      data: data, tipo: "orcamento",
+      cor: isDespesa ? (data < hoje ? "#FF3B30" : "#FF9500") : "#34C759",
+      emoji: isDespesa ? "🏠" : "💵",
+      titulo: (isDespesa ? "Pessoal · " : "Receita Pessoal · ") + (it.descricao||"--") + " · " + fmtV(it.valor),
+      sub: (it.categoria||"") + (it.recorrente ? " · ↻ Recorrente" : ""),
+      tab: "financeiro"
+    });
+  });
+
+  // Indexa por data
+  var eventosPorDia = {};
+  eventos.forEach(function(ev) {
+    if (!eventosPorDia[ev.data]) eventosPorDia[ev.data] = [];
+    eventosPorDia[ev.data].push(ev);
+  });
+
+  var primeiroDia = new Date(ano, mes, 1).getDay();
+  var diasNoMes = new Date(ano, mes + 1, 0).getDate();
+  var mesesNomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  var diasSemana = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+
+  var evsDia = diaSel ? (eventosPorDia[diaSel] || []) : [];
+
+  // Agenda próximos 30 dias
+  var hoje30 = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+  var agenda = Object.keys(eventosPorDia)
+    .filter(function(d) { return d >= hoje && d <= hoje30; })
+    .sort()
+    .map(function(d) { return { data: d, evs: eventosPorDia[d] }; });
+
+  var CARD = { borderRadius: 20, background: "linear-gradient(160deg,rgba(255,255,255,0.70) 0%,rgba(240,246,255,0.55) 100%)", backdropFilter: "blur(40px) saturate(2.0)", WebkitBackdropFilter: "blur(40px) saturate(2.0)", border: "0.5px solid rgba(255,255,255,0.80)", boxShadow: "0 2px 0 rgba(255,255,255,0.80) inset, 0 8px 24px rgba(100,120,200,0.10)", padding: 18, marginBottom: 16 };
+
+  return React.createElement('div', { style: { maxWidth: 720, margin: "0 auto" } },
+
+    // Header
+    React.createElement('div', { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } },
+      React.createElement('h2', { style: { fontSize: 24, fontWeight: 800, color: "#1C1C1E", margin: 0 } }, "📅 Calendário"),
+      React.createElement('button', { onClick: irHoje, style: { background: "rgba(0,122,255,0.12)", border: "none", borderRadius: 10, padding: "6px 14px", fontSize: 13, fontWeight: 600, color: "#007AFF", cursor: "pointer" } }, "Hoje")
+    ),
+
+    // Legenda
+    React.createElement('div', { style: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 } },
+      [
+        { cor: "#007AFF", label: "Contratos" },
+        { cor: "#FF9500", label: "Pagamentos" },
+        { cor: "#FF3B30", label: "Vencidos/Multas" },
+        { cor: "#AF52DE", label: "IPVA" },
+        { cor: "#32ADE6", label: "Seguro" },
+        { cor: "#5856D6", label: "Licenciamento" },
+        { cor: "#34C759", label: "Receitas" },
+        { cor: "#FF9500", label: "Pessoal/CNH" },
+      ].map(function(l) {
+        return React.createElement('div', { key: l.label, style: { display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#3C3C43" } },
+          React.createElement('div', { style: { width: 8, height: 8, borderRadius: "50%", background: l.cor, flexShrink: 0 } }),
+          l.label
+        );
+      })
+    ),
+
+    // Grade calendário
+    React.createElement('div', { style: Object.assign({}, CARD, { padding: 0, overflow: "hidden" }) },
+      React.createElement('div', { style: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "0.5px solid rgba(0,0,0,0.06)" } },
+        React.createElement('button', { onClick: prevMes, style: { border: "none", background: "rgba(0,0,0,0.05)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" } }, "‹"),
+        React.createElement('span', { style: { fontWeight: 700, fontSize: 16, color: "#1C1C1E" } }, mesesNomes[mes] + " " + ano),
+        React.createElement('button', { onClick: nextMes, style: { border: "none", background: "rgba(0,0,0,0.05)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" } }, "›")
+      ),
+      React.createElement('div', { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "8px 8px 4px" } },
+        diasSemana.map(function(d) {
+          return React.createElement('div', { key: d, style: { textAlign: "center", fontSize: 11, fontWeight: 600, color: "#8E8E93", padding: "4px 0" } }, d);
+        })
+      ),
+      React.createElement('div', { style: { display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "0 8px 12px", gap: 2 } },
+        Array.from({ length: primeiroDia }).map(function(_, i) { return React.createElement('div', { key: "e"+i }); }),
+        Array.from({ length: diasNoMes }).map(function(_, i) {
+          var d = i + 1;
+          var dStr = ano + "-" + String(mes+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+          var evs = eventosPorDia[dStr] || [];
+          var isHoje = dStr === hoje;
+          var isSel = dStr === diaSel;
+          var cores = [];
+          evs.forEach(function(e) { if (cores.indexOf(e.cor) === -1) cores.push(e.cor); });
+          return React.createElement('div', {
+            key: dStr, onClick: function() { setDiaSel(isSel ? null : dStr); },
+            style: { borderRadius: 10, padding: "5px 2px 4px", cursor: "pointer", background: isSel ? "#007AFF" : isHoje ? "rgba(0,122,255,0.10)" : "transparent", border: isHoje && !isSel ? "1.5px solid rgba(0,122,255,0.30)" : "1.5px solid transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, minHeight: 48 }
+          },
+            React.createElement('span', { style: { fontSize: 13, fontWeight: isHoje || isSel ? 700 : 400, color: isSel ? "#fff" : isHoje ? "#007AFF" : "#1C1C1E" } }, d),
+            evs.length > 0 && React.createElement('div', { style: { display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" } },
+              cores.slice(0,4).map(function(cor, ci) {
+                return React.createElement('div', { key: ci, style: { width: 5, height: 5, borderRadius: "50%", background: isSel ? "rgba(255,255,255,0.85)" : cor } });
+              }),
+              evs.length > 4 && React.createElement('span', { style: { fontSize: 9, color: isSel ? "rgba(255,255,255,0.7)" : "#8E8E93" } }, "+" + (evs.length - 4))
+            )
+          );
+        })
+      )
+    ),
+
+    // Painel dia selecionado
+    diaSel && React.createElement('div', { style: Object.assign({}, CARD) },
+      React.createElement('div', { style: { fontWeight: 700, fontSize: 15, color: "#1C1C1E", marginBottom: 12 } },
+        fmtD(diaSel) + (diaSel === hoje ? "  · Hoje" : "")
+      ),
+      evsDia.length === 0
+        ? React.createElement('div', { style: { color: "#8E8E93", fontSize: 14, textAlign: "center", padding: "16px 0" } }, "Nenhum evento neste dia ✅")
+        : evsDia.map(function(ev, i) {
+            return React.createElement('div', { key: i, onClick: function() { setTab(ev.tab); },
+              style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < evsDia.length-1 ? "0.5px solid rgba(0,0,0,0.06)" : "none", cursor: "pointer" }
+            },
+              React.createElement('div', { style: { width: 38, height: 38, borderRadius: 10, background: ev.cor + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 } }, ev.emoji),
+              React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: "#1C1C1E" } }, ev.titulo),
+                ev.sub && React.createElement('div', { style: { fontSize: 11, color: "#8E8E93", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, ev.sub)
+              ),
+              React.createElement('div', { style: { width: 8, height: 8, borderRadius: "50%", background: ev.cor, flexShrink: 0 } })
+            );
+          })
+    ),
+
+    // Agenda 30 dias
+    React.createElement('div', { style: Object.assign({}, CARD) },
+      React.createElement('div', { style: { fontWeight: 700, fontSize: 15, color: "#1C1C1E", marginBottom: 14 } }, "📌 Próximos 30 dias"),
+      agenda.length === 0
+        ? React.createElement('div', { style: { color: "#8E8E93", fontSize: 14, textAlign: "center", padding: "16px 0" } }, "Nenhum vencimento nos próximos 30 dias ✅")
+        : agenda.map(function(item) {
+            var isHoje2 = item.data === hoje;
+            return React.createElement('div', { key: item.data, style: { marginBottom: 14 } },
+              React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: isHoje2 ? "#007AFF" : "#8E8E93", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 } },
+                isHoje2 ? "HOJE · " + strData(item.data) : strData(item.data) + " · " + diasSemana[new Date(item.data + "T12:00:00").getDay()]
+              ),
+              item.evs.map(function(ev, i) {
+                return React.createElement('div', { key: i, onClick: function() { setTab(ev.tab); },
+                  style: { display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, background: "rgba(0,0,0,0.025)", marginBottom: 4, cursor: "pointer", borderLeft: "3px solid " + ev.cor }
+                },
+                  React.createElement('span', { style: { fontSize: 16, flexShrink: 0 } }, ev.emoji),
+                  React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: "#1C1C1E" } }, ev.titulo),
+                    ev.sub && React.createElement('div', { style: { fontSize: 11, color: "#8E8E93", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, ev.sub)
+                  )
+                );
+              })
+            );
+          })
+    )
+  );
+}
+
 
 function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState("");
@@ -16466,6 +16841,7 @@ function App() {
     if (tab === "financeiro") return React.createElement(Financeiro, { ...props, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3212}} );
     if (tab === "relatorios") return React.createElement(Relatorios, { ...props, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3213}} );
     if (tab === "config") return React.createElement(Config, { empresa: empresa, setEmpresa: setEmpresa, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3214}} );
+    if (tab === "calendario") return React.createElement(Calendario, { contratos: contratos, multas: multas, veiculos: veiculos, clientes: clientes, contas: contas, despesas: despesas, receitas: receitas, setTab: setTab, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3215}} );
     return null;
   }
 
