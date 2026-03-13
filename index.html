@@ -15525,7 +15525,22 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         + recAvMesConc.filter(function(r){return r.status==="pago";}).reduce(function(s,r){return s+parseFloat(r.valor||0);},0);
       var totalDespPrevista = despMesConc.reduce(function(s,d){return s+parseFloat(d.valor||0);},0);
       var totalDespPaga = despMesConc.filter(function(d){return d.status==="pago";}).reduce(function(s,d){return s+parseFloat(d.valor||0);},0);
-      var saldoConf = totalConfirmado - totalDespPaga;
+
+      // Manutenção do mês
+      var manutMesConc = (manutencoes||[]).filter(function(m){
+        return (m.data_entrada||"").slice(0,7) === mesConc || (m.data_previsao_pagamento||"").slice(0,7) === mesConc;
+      });
+      var totalManutPrevista = manutMesConc.reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
+      var totalManutPaga = manutMesConc.filter(function(m){return m.status==="concluido"||m.status==="pago";}).reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
+
+      // Multas do mês
+      var multasMesConc = (multas||[]).filter(function(m){
+        return (m.data||"").slice(0,7) === mesConc || (m.vencimento||"").slice(0,7) === mesConc;
+      });
+      var totalMultasVenc = multasMesConc.reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
+      var totalMultasPagas = multasMesConc.filter(function(m){return m.status==="pago";}).reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
+
+      var saldoConf = totalConfirmado - totalDespPaga - totalManutPaga - totalMultasPagas;
       var anos = ["2024","2025","2026","2027"]; var mms = ["01","02","03","04","05","06","07","08","09","10","11","12"];
       var nomesMes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
       return React.createElement('div', { style: { display:"flex", flexDirection:"column", gap:12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2377}}
@@ -15538,20 +15553,45 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           )
           , React.createElement('span', { style: { fontSize:13, color:C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2385}}, "Conciliação")
         )
-        , React.createElement('div', { style: { display:"flex", gap:10, flexWrap:"wrap" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2387}}
-          , React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{flex:1,minWidth:130}), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2388}}
-            , React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2389}}, "Previsto receber" )
-            , React.createElement('div', { style: { fontSize:20, fontWeight:800, color:C.blue }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2390}}, fmtBRL(totalPrevisto))
-          )
-          , React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{flex:1,minWidth:130}), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2392}}
-            , React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2393}}, "Confirmado")
-            , React.createElement('div', { style: { fontSize:20, fontWeight:800, color:C.green }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2394}}, fmtBRL(totalConfirmado))
-          )
-          , React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{flex:1,minWidth:130}), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2396}}
-            , React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2397}}, "Saldo líquido" )
-            , React.createElement('div', { style: { fontSize:20, fontWeight:800, color:saldoConf>=0?C.green:C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2398}}, fmtBRL(saldoConf))
-          )
-        )
+        , (function() {
+          var pendDesp = totalDespPrevista - totalDespPaga;
+          var pendManut = totalManutPrevista - totalManutPaga;
+          var pendMultas = totalMultasVenc - totalMultasPagas;
+          function Row(items) {
+            return React.createElement('div', { style: { display:"flex", gap:10 } },
+              items.map(function(b, i) {
+                return React.createElement('div', { key: i, className: CARD_CLS, style: Object.assign({},CARD,{flex:1}) },
+                  React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4, letterSpacing:0.5 } }, b.label),
+                  React.createElement('div', { style: { fontSize:19, fontWeight:800, color:b.cor, lineHeight:1.1 } }, fmtBRL(b.val)),
+                  b.sub && React.createElement('div', { style: { fontSize:10, color:C.sub, marginTop:3 } }, b.sub)
+                );
+              })
+            );
+          }
+          return React.createElement('div', { style: { display:"flex", flexDirection:"column", gap:10 } },
+            Row([
+              { label:"📥 Previsto Receber",  val:totalPrevisto,     cor:C.blue,    sub:ctsMesConc.length+" contratos" },
+              { label:"✅ Receita Confirmada", val:totalConfirmado,   cor:C.green,   sub:"pago + parcial" }
+            ]),
+            Row([
+              { label:"📤 Despesas Previstas", val:totalDespPrevista, cor:C.red,     sub:despMesConc.length+" lançamento(s)" },
+              { label:"✅ Despesas Pagas",      val:totalDespPaga,     cor:C.orange,  sub:pendDesp>0?"falta "+fmtBRL(pendDesp):"todas pagas" }
+            ]),
+            Row([
+              { label:"🔧 Manutenção Prevista",val:totalManutPrevista,cor:"#AF52DE", sub:manutMesConc.length+" serviço(s)" },
+              { label:"✅ Manutenção Paga",     val:totalManutPaga,    cor:"#5856D6", sub:pendManut>0?"falta "+fmtBRL(pendManut):"todas pagas" }
+            ]),
+            Row([
+              { label:"⚠️ Multas do Mês",       val:totalMultasVenc,   cor:C.red,     sub:multasMesConc.length+" multa(s)" },
+              { label:"✅ Multas Pagas",         val:totalMultasPagas,  cor:C.green,   sub:pendMultas>0?"falta "+fmtBRL(pendMultas):"todas pagas" }
+            ]),
+            React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{background: saldoConf>=0?"linear-gradient(135deg,rgba(52,199,89,0.12),rgba(52,199,89,0.04))":"linear-gradient(135deg,rgba(255,59,48,0.12),rgba(255,59,48,0.04))", border:"1.5px solid "+(saldoConf>=0?C.green:C.red)+"44"}) },
+              React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4, letterSpacing:0.5 } }, "💰 Saldo Líquido"),
+              React.createElement('div', { style: { fontSize:26, fontWeight:900, color:saldoConf>=0?C.green:C.red, letterSpacing:-0.5 } }, fmtBRL(saldoConf)),
+              React.createElement('div', { style: { fontSize:10, color:C.sub, marginTop:3 } }, "receita confirmada − saídas pagas")
+            )
+          );
+        })()
         , React.createElement('div', { className: "lg-card", style: CARD, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2401}}
           , React.createElement('div', { style: { fontSize:11, fontWeight:700, color:C.sub, textTransform:"uppercase", marginBottom:10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2402}}, "Receitas de contratos"  )
           , ctsMesConc.length === 0 && React.createElement('div', { style: { color:C.sub, fontSize:13, textAlign:"center", padding:12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2403}}, "Nenhum contrato com vencimento neste mês"     )
@@ -15591,14 +15631,73 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
             );
           })
         )
-        , React.createElement('div', { className: "lg-card", style: CARD, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2440}}
-          , React.createElement('div', { style: { fontSize:11, fontWeight:700, color:C.sub, textTransform:"uppercase", marginBottom:10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2441}}, "Saídas do mês"  )
-          , React.createElement('div', { style: { display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid "+C.border }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2442}}
-            , React.createElement('span', { style: { fontSize:13 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2443}}, "Despesas previstas" ), React.createElement('span', { style: { fontWeight:700, color:C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2443}}, fmtBRL(totalDespPrevista))
-          )
-          , React.createElement('div', { style: { display:"flex", justifyContent:"space-between", padding:"6px 0" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2445}}
-            , React.createElement('span', { style: { fontSize:13 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2446}}, "Despesas pagas" ), React.createElement('span', { style: { fontWeight:700, color:C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2446}}, fmtBRL(totalDespPaga))
-          )
+        , React.createElement('div', { className: "lg-card", style: CARD },
+          React.createElement('div', { style: { fontSize:11, fontWeight:700, color:C.sub, textTransform:"uppercase", marginBottom:10 } }, "📤 Despesas do mês"),
+          despMesConc.length === 0 && React.createElement('div', { style: { color:C.sub, fontSize:13, textAlign:"center", padding:12 } }, "Nenhuma despesa neste mês"),
+          despMesConc.map(function(d,i) {
+            var pago = d.status === "pago";
+            return React.createElement('div', { key: d.id, style: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom: i<despMesConc.length-1?"1px solid "+C.border:"none", gap:8 } },
+              React.createElement('div', { style: { flex:1 } },
+                React.createElement('div', { style: { fontSize:13, fontWeight:600 } }, d.descricao||"--"),
+                React.createElement('div', { style: { fontSize:11, color:C.sub } }, (d.categoria||"") + (d.data ? " · " + fmtDate(d.data) : "") + (d.recorrente ? " · ↻ Recorrente" : ""))
+              ),
+              React.createElement('div', { style: { textAlign:"right" } },
+                React.createElement('div', { style: { fontWeight:700, color:C.red } }, fmtBRL(d.valor)),
+                React.createElement('span', { style: Badge(pago ? C.green : C.orange) }, pago ? "✅ paga" : "⏳ prevista")
+              )
+            );
+          })
+        )
+        , React.createElement('div', { className: "lg-card", style: CARD },
+          React.createElement('div', { style: { fontSize:11, fontWeight:700, color:C.sub, textTransform:"uppercase", marginBottom:10 } }, "🔧 Manutenção do mês"),
+          manutMesConc.length === 0 && React.createElement('div', { style: { color:C.sub, fontSize:13, textAlign:"center", padding:12 } }, "Nenhuma manutenção neste mês"),
+          manutMesConc.map(function(m,i) {
+            var ve = (veiculos||[]).find(function(v){return v.id==m.veiculo_id;})||{};
+            var pago = m.status === "concluido" || m.status === "pago";
+            var dataRef = m.data_entrada || m.data_previsao_pagamento;
+            return React.createElement('div', { key: m.id, style: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom: i<manutMesConc.length-1?"1px solid "+C.border:"none", gap:8 } },
+              React.createElement('div', { style: { flex:1 } },
+                React.createElement('div', { style: { fontSize:13, fontWeight:600 } }, m.tipo||"--"),
+                React.createElement('div', { style: { fontSize:11, color:C.sub } }, (ve.placa||"--") + " " + (ve.modelo||"") + (dataRef ? " · " + fmtDate(dataRef) : ""))
+              ),
+              React.createElement('div', { style: { textAlign:"right" } },
+                React.createElement('div', { style: { fontWeight:700, color:"#AF52DE" } }, fmtBRL(m.valor)),
+                React.createElement('span', { style: Badge(pago ? C.green : C.orange) }, pago ? "✅ paga" : "⏳ prevista")
+              )
+            );
+          })
+        )
+        , React.createElement('div', { className: "lg-card", style: CARD },
+          React.createElement('div', { style: { fontSize:11, fontWeight:700, color:C.sub, textTransform:"uppercase", marginBottom:10 } }, "⚠️ Multas do mês"),
+          multasMesConc.length === 0 && React.createElement('div', { style: { color:C.sub, fontSize:13, textAlign:"center", padding:12 } }, "Nenhuma multa neste mês"),
+          multasMesConc.map(function(m,i) {
+            var ct = (contratos||[]).find(function(c){return c.id==m.contrato_id;})||{};
+            var cl = (clientes||[]).find(function(c){return c.id==ct.cliente_id;})||{};
+            var ve = (veiculos||[]).find(function(v){return v.id==ct.veiculo_id;})||{};
+            var pago = m.status === "pago";
+            var ns = NOTIF_STATUS && NOTIF_STATUS.find(function(n){return n.id===(m.status_notificacao||"nao_notificado");})||{label:"—",emoji:"○",cor:C.sub};
+            return React.createElement('div', { key: m.id, style: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom: i<multasMesConc.length-1?"1px solid "+C.border:"none", gap:8 } },
+              React.createElement('div', { style: { flex:1 } },
+                React.createElement('div', { style: { fontSize:13, fontWeight:600 } }, m.tipo||"--"),
+                React.createElement('div', { style: { fontSize:11, color:C.sub } },
+                  (cl.nome||"--") + " · " + (ve.placa||"--") +
+                  (m.data ? " · inf. " + fmtDate(m.data) : "") +
+                  (m.vencimento ? " · venc. " + fmtDate(m.vencimento) : "")
+                ),
+                React.createElement('div', { style: { fontSize:10, marginTop:2 } },
+                  React.createElement('span', { style: { color: ns.cor, fontWeight:600 } }, ns.emoji + " " + ns.label),
+                  m.data_notificacao && React.createElement('span', { style: { color:C.sub, marginLeft:6 } }, "notif. " + fmtDate(m.data_notificacao))
+                )
+              ),
+              React.createElement('div', { style: { textAlign:"right" } },
+                React.createElement('div', { style: { fontWeight:700, color: pago ? C.green : C.red } }, fmtBRL(m.valor)),
+                React.createElement('span', { style: Badge(pago ? C.green : C.red) }, pago ? "✅ paga" : "⏳ pendente"),
+                m.cobrado_cliente && m.cobrado_cliente !== "nao" && React.createElement('div', { style: { fontSize:10, color: m.cobrado_cliente === "pago" ? C.green : C.orange, marginTop:2 } },
+                  "👤 " + (m.cobrado_cliente === "pago" ? "cobrado" : "cobr. pendente") + (m.valor_cobrado ? " · " + fmtBRL(m.valor_cobrado) : "")
+                )
+              )
+            );
+          })
         )
       );
     })()
