@@ -211,42 +211,52 @@ input[type=file]{display:none}
 }
 
 /* === NAV BOTTOM === */
-.lg-nav{
-  /* Floating pill — no border-top, no full-width bar */
-  background: none;
+.lg-nav {
+  /* Gradient fade from bottom — visível e suave */
+  background: linear-gradient(to top,
+    rgba(235,240,255,0.96) 0%,
+    rgba(235,240,255,0.70) 50%,
+    rgba(235,240,255,0.00) 100%);
   border-top: none;
   box-shadow: none;
   display: flex;
   justify-content: center;
   align-items: flex-end;
   pointer-events: none;
+  padding-top: 32px;
+}
+.lg-nav > * {
+  pointer-events: all;
 }
 .lg-nav-pill {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 6px;
+  gap: 0px;
+  padding: 4px 4px;
   justify-content: flex-start;
-  border-radius: 28px;
-  /* Apple Music iOS 26 — etéreo, só blur */
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(52px) saturate(1.6) brightness(1.04);
-  -webkit-backdrop-filter: blur(52px) saturate(1.6) brightness(1.04);
-  border: 0.5px solid rgba(255,255,255,0.28);
+  border-radius: 32px;
+  /* Liquid Glass — visível com blur real */
+  background: linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(220,232,255,0.38) 100%);
+  backdrop-filter: blur(40px) saturate(2.0) brightness(1.06);
+  -webkit-backdrop-filter: blur(40px) saturate(2.0) brightness(1.06);
+  border: 0.5px solid rgba(255,255,255,0.70);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.30) inset,
-    0 4px 16px rgba(0,0,0,0.06),
-    0 1px 4px rgba(0,0,0,0.04);
+    0 2px 0 rgba(255,255,255,0.80) inset,
+    0 -1px 0 rgba(0,0,0,0.04) inset,
+    0 8px 24px rgba(100,120,200,0.14),
+    0 2px 8px rgba(0,0,0,0.08);
   position: relative;
   pointer-events: all;
   overflow: hidden;
+  width: calc(4 * 72px + 10px);
+  max-width: calc(100vw - 90px);
 }
 .lg-nav-pill::before {
   content: '';
   position: absolute;
-  top: 0; left: 10%; right: 10%;
-  height: 40%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 100%);
+  top: 0; left: 8%; right: 8%;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.60) 0%, rgba(255,255,255,0) 100%);
   border-radius: 0 0 50% 50%;
   pointer-events: none;
 }
@@ -254,26 +264,29 @@ input[type=file]{display:none}
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 10px 6px;
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 4px 6px;
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: 22px;
-  min-width: 62px;
-  flex: 0 0 auto;
+  width: 72px;
+  height: 54px;
+  flex: 0 0 72px;
   position: relative;
   transition: background .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 .lg-nav-btn:active {
-  background: rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.25);
 }
 .lg-nav-btn-active {
-  background: rgba(255,255,255,0.30);
+  background: linear-gradient(160deg, rgba(255,255,255,0.82) 0%, rgba(210,228,255,0.65) 100%);
   box-shadow:
-    0 1px 0 rgba(255,255,255,0.50) inset,
-    0 0 0 0.5px rgba(255,255,255,0.35);
+    0 1px 0 rgba(255,255,255,0.90) inset,
+    0 2px 8px rgba(0,100,255,0.12),
+    0 0 0 0.5px rgba(255,255,255,0.60);
 }
 </style>
 <script>(function(){
@@ -13343,18 +13356,32 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
   const lucro = receitaContratos + receitaManual - totalDesp;
 
-  const renovadosIds = new Set(
-    contratos.filter(c => {
-      if (c.renovado_para) return true;
-      // detecção retroativa: existe contrato filho cujas observacoes referenciam este
-      return contratos.some(filho =>
-        filho.observacoes && filho.observacoes.match(/Renovação contrato #(\d+)/) &&
-        parseInt(filho.observacoes.match(/Renovação contrato #(\d+)/)[1]) === c.id
-      );
-    }).map(c => c.id)
-  );
+  // Mesma lógica exata do badge "renovado" na lista — itera filhos e marca os pais
+  const renovadosIds = new Set();
+  contratos.forEach(function(filho) {
+    if (!filho.data_inicio) return;
+    // critério do badge: mesmo cliente+veiculo, data_inicio do filho === data_fim do pai
+    var pai = contratos.find(function(p) {
+      return p.id !== filho.id &&
+        String(p.cliente_id) === String(filho.cliente_id) &&
+        String(p.veiculo_id) === String(filho.veiculo_id) &&
+        p.data_fim === filho.data_inicio;
+    });
+    if (pai) renovadosIds.add(pai.id);
+    // critério extra: observacoes do filho referenciam o pai por numero
+    if (filho.observacoes) {
+      var m = filho.observacoes.match(/Renovação contrato #(\d+)/);
+      if (m) renovadosIds.add(parseInt(m[1]));
+    }
+  });
+  // critério direto: campo renovado_para ou cancelado
+  contratos.forEach(function(c) {
+    if (c.renovado_para) renovadosIds.add(c.id);
+    if (c.status === "cancelado") renovadosIds.add(c.id);
+  });
   const contratosAtrasados = contratos.filter(c => c.status === "ativo" && (c.status_pagamento === "pendente" || !c.status_pagamento) && c.previsao_pagamento && c.previsao_pagamento < hoje);
-  const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7 && !renovadosIds.has(c.id));
+  const contratosVencendo = contratos.filter(c => c.status === "ativo" && c.data_fim && c.data_fim >= hoje && c.data_fim <= str7 && !renovadosIds.has(c.id) && !c.recorrente);
+
   const cnhVencida = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh < hoje);
   const cnhVencendo = clientes.filter(c => c.vencimento_cnh && c.vencimento_cnh >= hoje && c.vencimento_cnh <= str30);
   const multasPend = multas.filter(m => m.status === "pendente");
@@ -13478,6 +13505,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
           sub: "Total: " + fmtBRL(contratosAtrasados.reduce((s,c)=>s+parseFloat(c.valor_total||0),0)), tab: "contratos", __self: this, __source: {fileName: _jsxFileName, lineNumber: 437}} )
         , React.createElement(AlertBox, { cor: C.orange, icon: "⏰", titulo: "Contratos vencendo em 7 dias (" + contratosVencendo.length + ")",
           items: contratosVencendo.map(c => { var cl = clientes.find(x => x.id == c.cliente_id); return "Contrato #" + numCt(c.id) + " · " + (cl && cl.nome || "--") + " · ate " + fmtDate(c.data_fim); }), tab: "contratos", __self: this, __source: {fileName: _jsxFileName, lineNumber: 440}} )
+
         , React.createElement(AlertBox, { cor: C.red, icon: "🪪", titulo: "CNH vencida (" + cnhVencida.length + ")",
           items: cnhVencida.map(c => c.nome + " · " + fmtDate(c.vencimento_cnh)), tab: "clientes", __self: this, __source: {fileName: _jsxFileName, lineNumber: 442}} )
         , React.createElement(AlertBox, { cor: C.orange, icon: "🪪", titulo: "CNH vencendo em 30 dias (" + cnhVencendo.length + ")",
@@ -16124,6 +16152,130 @@ function Config({ empresa, setEmpresa, toast }) {
 }
 
 // -- APP --------------------------------------------------------------------
+function SearchBar({ clientes, contratos, multas, veiculos, setTab, desktop }) {
+  var _a = React.useState(desktop ? true : false), open = _a[0], setOpen = _a[1];
+  var _b = React.useState(""), query = _b[0], setQuery = _b[1];
+  var inputRef = React.useRef(null);
+  var wrapRef = React.useRef(null);
+
+  React.useEffect(function() {
+    if (open && inputRef.current) inputRef.current.focus();
+  }, [open]);
+
+  React.useEffect(function() {
+    function onOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
+        setOpen(false); setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return function() {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
+  }, []);
+
+  var q = query.trim().toLowerCase();
+  var results = [];
+  if (q.length >= 2) {
+    (clientes || []).filter(function(c) {
+      return (c.nome||"").toLowerCase().includes(q) || (c.cpf||"").replace(/\D/g,"").includes(q.replace(/\D/g,""));
+    }).slice(0,3).forEach(function(c) {
+      results.push({ tipo: "Cliente", icon: "\uD83D\uDC64", label: c.nome, sub: c.cpf || "", action: function() { setTab("clientes"); } });
+    });
+    (contratos || []).filter(function(c) {
+      var cl = (clientes||[]).find(function(x) { return x.id == c.cliente_id; });
+      return ("00000"+c.id).slice(-5).includes(q) || (cl && (cl.nome||"").toLowerCase().includes(q));
+    }).slice(0,3).forEach(function(c) {
+      var cl = (clientes||[]).find(function(x) { return x.id == c.cliente_id; });
+      var ve = (veiculos||[]).find(function(x) { return x.id == c.veiculo_id; });
+      results.push({ tipo: "Contrato", icon: "\uD83D\uDCCB", label: "#"+("00000"+c.id).slice(-5)+" · "+(cl&&cl.nome||"—"), sub: (ve&&ve.placa||"")+" · "+c.status, action: function() { setTab("contratos"); } });
+    });
+    (multas || []).filter(function(c) {
+      var cl = (clientes||[]).find(function(x) { return x.id == c.cliente_id; });
+      var ve = (veiculos||[]).find(function(x) { return x.id == c.veiculo_id; });
+      return (ve&&(ve.placa||"").toLowerCase().includes(q)) ||
+             (cl&&(cl.nome||"").toLowerCase().includes(q)) ||
+             (c.descricao||"").toLowerCase().includes(q) ||
+             (c.tipo||"").toLowerCase().includes(q) ||
+             String(c.id).includes(q) ||
+             ("00000"+String(c.id)).slice(-5).includes(q);
+    }).slice(0,4).forEach(function(c) {
+      var cl = (clientes||[]).find(function(x) { return x.id == c.cliente_id; });
+      var ve = (veiculos||[]).find(function(x) { return x.id == c.veiculo_id; });
+      var aitNum = "AIT #"+("00000"+String(c.id)).slice(-5);
+      results.push({ tipo: "Multa", icon: "\u26A0\uFE0F", label: aitNum+" · "+(ve&&ve.placa||"—"), sub: (cl&&cl.nome||"—")+" · "+(c.tipo||c.descricao||""), action: function() { setTab("multas"); } });
+    });
+    (veiculos || []).filter(function(c) {
+      return (c.placa||"").toLowerCase().includes(q) || (c.modelo||"").toLowerCase().includes(q) || (c.marca||"").toLowerCase().includes(q);
+    }).slice(0,3).forEach(function(c) {
+      results.push({ tipo: "Veículo", icon: "\uD83D\uDE97", label: (c.placa||"—")+" · "+(c.marca||"")+" "+(c.modelo||""), sub: c.ano||"", action: function() { setTab("frota"); } });
+    });
+  }
+
+  var TIPO_COLORS = { "Cliente": C.blue, "Contrato": C.green, "Multa": C.orange, "Veículo": C.teal };
+  var btnStyle = { width: 54, height: 54, borderRadius: "50%", border: "0.5px solid rgba(255,255,255,0.70)", background: open ? "linear-gradient(160deg,rgba(210,228,255,0.75),rgba(180,210,255,0.55))" : "linear-gradient(160deg,rgba(255,255,255,0.55),rgba(220,232,255,0.38))", backdropFilter: "blur(40px) saturate(2.0) brightness(1.06)", WebkitBackdropFilter: "blur(40px) saturate(2.0) brightness(1.06)", boxShadow: "0 2px 0 rgba(255,255,255,0.80) inset, 0 8px 24px rgba(100,120,200,0.14), 0 2px 8px rgba(0,0,0,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s ease", color: open ? C.blue : "#3C3C43" };
+  var dropStyle = { position: "absolute", bottom: 58, right: 0, width: 300, maxHeight: 400, borderRadius: 20, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(52px) saturate(2.0) brightness(1.06)", WebkitBackdropFilter: "blur(52px) saturate(2.0) brightness(1.06)", border: "0.5px solid rgba(255,255,255,0.88)", boxShadow: "0 2px 0 rgba(255,255,255,0.90) inset, 0 16px 48px rgba(0,0,0,0.14)", overflow: "hidden", zIndex: 200 };
+  var searchIcon = React.createElement('svg', { width: 26, height: 26, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" }, React.createElement('circle', { cx: 11, cy: 11, r: 7 }), React.createElement('line', { x1: 16.5, y1: 16.5, x2: 22, y2: 22 }));
+  var searchIconSm = React.createElement('svg', { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: C.sub, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" }, React.createElement('circle', { cx: 11, cy: 11, r: 7 }), React.createElement('line', { x1: 16.5, y1: 16.5, x2: 22, y2: 22 }));
+
+  if (desktop) {
+    return React.createElement('div', { ref: wrapRef, style: { position: "relative" } },
+      React.createElement('div', { style: { display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(160deg,rgba(255,255,255,0.55),rgba(220,232,255,0.38))", backdropFilter: "blur(40px) saturate(2.0)", WebkitBackdropFilter: "blur(40px) saturate(2.0)", border: "0.5px solid rgba(255,255,255,0.70)", borderRadius: 12, padding: "8px 12px", boxShadow: "0 2px 0 rgba(255,255,255,0.80) inset, 0 4px 16px rgba(100,120,200,0.10)" } },
+        searchIconSm,
+        React.createElement('input', { value: query, onChange: function(e) { setQuery(e.target.value); }, placeholder: "Buscar...", style: { flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 13, color: "#1C1C1E", fontFamily: "inherit" } }),
+        query ? React.createElement('button', { onClick: function() { setQuery(""); }, style: { border: "none", background: "rgba(0,0,0,0.08)", borderRadius: "50%", width: 16, height: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.sub } }, "\u2715") : null
+      ),
+      query.length >= 2 && results.length > 0 && React.createElement('div', { style: { position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, borderRadius: 14, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(40px) saturate(2.0)", WebkitBackdropFilter: "blur(40px) saturate(2.0)", border: "0.5px solid rgba(255,255,255,0.88)", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden", zIndex: 300 } },
+        results.map(function(r, i) {
+          return React.createElement('button', { key: i, onClick: function() { r.action(); setQuery(""); }, style: { width: "100%", border: "none", background: "transparent", cursor: "pointer", padding: "9px 12px", display: "flex", alignItems: "center", gap: 10, borderBottom: i < results.length-1 ? "0.5px solid rgba(0,0,0,0.05)" : "none", textAlign: "left" }, onMouseEnter: function(e) { e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }, onMouseLeave: function(e) { e.currentTarget.style.background = "transparent"; } },
+            React.createElement('div', { style: { width: 28, height: 28, borderRadius: 8, background: "rgba(0,0,0,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 } }, r.icon),
+            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+              React.createElement('div', { style: { fontSize: 12, fontWeight: 500, color: "#1C1C1E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, r.label),
+              r.sub ? React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, r.sub) : null
+            ),
+            React.createElement('span', { style: { fontSize: 10, fontWeight: 600, color: TIPO_COLORS[r.tipo]||C.sub, background: "rgba(0,0,0,0.05)", borderRadius: 5, padding: "2px 6px", flexShrink: 0 } }, r.tipo)
+          );
+        })
+      )
+    );
+  }
+
+  return React.createElement('div', { ref: wrapRef, style: { position: "relative", flexShrink: 0 } },
+    React.createElement('button', { onClick: function() { setOpen(function(o) { return !o; }); if (open) setQuery(""); }, style: btnStyle }, searchIcon),
+    open && React.createElement('div', { style: dropStyle },
+      React.createElement('div', { style: { padding: "12px 14px 10px", borderBottom: "0.5px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 8 } },
+        searchIconSm,
+        React.createElement('input', { ref: inputRef, value: query, onChange: function(e) { setQuery(e.target.value); }, placeholder: "Buscar clientes, contratos...", style: { flex: 1, border: "none", background: "transparent", outline: "none", fontSize: 14, color: "#1C1C1E", fontFamily: "inherit" } }),
+        query ? React.createElement('button', { onClick: function() { setQuery(""); }, style: { border: "none", background: "rgba(0,0,0,0.08)", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: C.sub, fontSize: 10 } }, "✕") : null
+      ),
+      React.createElement('div', { style: { overflowY: "auto", maxHeight: 320 } },
+        q.length < 2
+          ? React.createElement('div', { style: { padding: "20px 16px", textAlign: "center", color: C.sub, fontSize: 13 } }, "Digite pelo menos 2 caracteres")
+          : results.length === 0
+            ? React.createElement('div', { style: { padding: "20px 16px", textAlign: "center", color: C.sub, fontSize: 13 } }, "Nenhum resultado")
+            : results.map(function(r, i) {
+                return React.createElement('button', {
+                  key: i,
+                  onClick: function() { r.action(); setOpen(false); setQuery(""); },
+                  style: { width: "100%", border: "none", background: "transparent", cursor: "pointer", padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: i < results.length-1 ? "0.5px solid rgba(0,0,0,0.05)" : "none", textAlign: "left" },
+                  onMouseEnter: function(e) { e.currentTarget.style.background = "rgba(0,0,0,0.04)"; },
+                  onMouseLeave: function(e) { e.currentTarget.style.background = "transparent"; }
+                },
+                  React.createElement('div', { style: { width: 34, height: 34, borderRadius: 10, background: "rgba(0,0,0,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 } }, r.icon),
+                  React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', { style: { fontSize: 13, fontWeight: 500, color: "#1C1C1E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, r.label),
+                    r.sub ? React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, r.sub) : null
+                  ),
+                  React.createElement('span', { style: { fontSize: 10, fontWeight: 600, color: TIPO_COLORS[r.tipo]||C.sub, background: "rgba(0,0,0,0.05)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 } }, r.tipo)
+                );
+              })
+      )
+    )
+  );
+}
+
 function NavIcon({ id, active }) {
   const color = active ? C.blue : C.sub;
   const svg = ICONS[id].replace(/stroke="currentColor"/g, 'stroke="' + color + '"');
@@ -16139,15 +16291,15 @@ const TABS = [
   { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatórios" }, { id: "config", label: "Config" }
 ];
 const ICONS = {
-  inicio:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>',
-  frota:      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5h11L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M2 14h1M21 14h1"/></svg>',
-  clientes:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
-  contratos:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
-  multas:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-  manutencao: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
-  financeiro: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2m-3-7h4.5a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3H13m-1 0v2"/></svg>',
-  relatorios: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13m4 4V9m4 8v-5"/></svg>',
-  config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+  inicio:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/><\/svg>',
+  frota:      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5h11L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M2 14h1M21 14h1"/><\/svg>',
+  clientes:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><\/svg>',
+  contratos:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/><\/svg>',
+  multas:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/><\/svg>',
+  manutencao: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/><\/svg>',
+  financeiro: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2m-3-7h4.5a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3H13m-1 0v2"/><\/svg>',
+  relatorios: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13m4 4V9m4 8v-5"/><\/svg>',
+  config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><\/svg>'
 };
 
 function LoginScreen({ onLogin }) {
@@ -16322,24 +16474,28 @@ function App() {
   if (mobile) return (
     React.createElement('div', { style: { minHeight: "100vh", paddingBottom: 110 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3221}}
       , React.createElement('div', { style: { padding: "16px 16px 0" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3222}}, page())
-      , React.createElement('nav', { className: "lg-nav", style: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 14px)", paddingTop: 8, paddingLeft: 16, paddingRight: 16 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3223}}
-        , React.createElement('div', { className: "lg-nav-pill", style: { overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none", width: "100%", WebkitOverflowScrolling: "touch" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3224}}
+      , React.createElement('nav', { className: "lg-nav", style: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 16px)", paddingLeft: 16, paddingRight: 16, display: "flex", alignItems: "flex-end", gap: 10, justifyContent: "space-between" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3223}}
+        , React.createElement('div', { className: "lg-nav-pill", style: { overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3224}}
           , TABS.map(t => (
             React.createElement('button', { key: t.id, onClick: () => setTab(t.id), className: "lg-nav-btn" + (tab === t.id ? " lg-nav-btn-active" : ""), __self: this, __source: {fileName: _jsxFileName, lineNumber: 3225}}
               , React.createElement(NavIcon, { id: t.id, active: tab === t.id, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3226}})
-              , React.createElement('span', { style: { fontSize: 10, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.blue : C.sub, whiteSpace: "nowrap", position: "relative", zIndex: 1, letterSpacing: tab === t.id ? -0.2 : 0 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3227}}, t.label)
+              , React.createElement('span', { style: { fontSize: 10, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.blue : C.sub, whiteSpace: "nowrap", position: "relative", zIndex: 1, letterSpacing: 0 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3227}}, t.label)
             )
           ))
         )
+        , React.createElement(SearchBar, { clientes: clientes, contratos: contratos, multas: multas, veiculos: veiculos, setTab: setTab, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3232}})
       )
-      , React.createElement(Toast, { msg: toastState.msg, type: toastState.type, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3232}} )
+      , React.createElement(Toast, { msg: toastState.msg, type: toastState.type, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3233}} )
     )
   );
 
   return (
     React.createElement('div', { style: { display: "flex", minHeight: "100vh" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3237}}
       , React.createElement('nav', { className: "lg-sidebar", style: { width: 210, padding: "26px 12px", display: "flex", flexDirection: "column", gap: 3, flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3238}}
-        , React.createElement('div', { style: { fontSize: 16, fontWeight: 800, color: C.blue, marginBottom: 20, paddingLeft: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3239}}, "AutoGest Pro" )
+        , React.createElement('div', { style: { fontSize: 16, fontWeight: 800, color: C.blue, marginBottom: 12, paddingLeft: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3239}}, "AutoGest Pro" )
+        , React.createElement('div', { style: { position: "relative", marginBottom: 16, paddingLeft: 4, paddingRight: 4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3240}}
+          , React.createElement(SearchBar, { clientes: clientes, contratos: contratos, multas: multas, veiculos: veiculos, setTab: setTab, desktop: true, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3240}})
+        )
         , TABS.map(t => (
           React.createElement('button', { key: t.id, onClick: () => setTab(t.id), className: tab===t.id?"lg-tab-active":"", style: { borderRadius: 10, padding: "9px 12px", fontSize: 13, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10, transition: "all .15s ease", color: tab === t.id ? C.blue : "#3C3C43", border: "none", background: "transparent" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3241}}
             , React.createElement(NavIcon, { id: t.id, active: tab === t.id, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3242}}), t.label
