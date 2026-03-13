@@ -16537,7 +16537,7 @@ const TABS = [
   { id: "inicio", label: "Início" }, { id: "frota", label: "Frota" }, { id: "clientes", label: "Clientes" },
   { id: "contratos", label: "Contratos" }, { id: "multas", label: "Multas" }, { id: "manutencao", label: "Manutenção" },
   { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatórios" },
-  { id: "calendario", label: "Calendário" }, { id: "config", label: "Config" }
+  { id: "calendario", label: "Calendário" }, { id: "simulador", label: "Simulador" }, { id: "config", label: "Config" }
 ];
 const ICONS = {
   inicio:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/><\/svg>',
@@ -16549,7 +16549,8 @@ const ICONS = {
   financeiro: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2m-3-7h4.5a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3H13m-1 0v2"/><\/svg>',
   relatorios: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13m4 4V9m4 8v-5"/><\/svg>',
   config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/><\/svg>',
-  calendario: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/><\/svg>'
+  calendario: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/><\/svg>',
+  simulador: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><\/svg>'
 };
 
 
@@ -16961,6 +16962,579 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+function Simulador({ veiculos, contratos, despesas, manutencoes, multas, receitas, toast }) {
+  var hoje = new Date();
+
+  // ─── FIPE ────────────────────────────────────────────────────────────────────
+  var [fipeMarcas,  setFipeMarcas]  = React.useState([]);
+  var [fipeModelos, setFipeModelos] = React.useState([]);
+  var [fipeAnos,    setFipeAnos]    = React.useState([]);
+  var [fipeMarca,   setFipeMarca]   = React.useState("");
+  var [fipeModelo,  setFipeModelo]  = React.useState("");
+  var [fipeAno,     setFipeAno]     = React.useState("");
+  var [fipeValor,   setFipeValor]   = React.useState(null);
+  var [fipeLoad,    setFipeLoad]    = React.useState(false);
+  var [fipeError,   setFipeError]   = React.useState("");
+  var FIPE = "https://fipe.parallelum.com.br/api/v2/cars";
+
+  async function fGet(url) {
+    var r = await fetch(url, { headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+  React.useEffect(function() {
+    setFipeLoad(true);
+    fGet(FIPE + "/brands")
+      .then(function(d) { setFipeMarcas(d || []); })
+      .catch(function() { setFipeError("Não foi possível carregar a FIPE. Verifique sua conexão."); })
+      .finally(function() { setFipeLoad(false); });
+  }, []);
+  function onMarca(e) {
+    var id = e.target.value; setFipeMarca(id); setFipeModelo(""); setFipeAno(""); setFipeModelos([]); setFipeAnos([]); setFipeValor(null);
+    if (!id) return;
+    setFipeLoad(true);
+    fGet(FIPE + "/brands/" + id + "/models")
+      .then(function(d) { setFipeModelos(d.models || d || []); })
+      .catch(function() { setFipeError("Erro ao carregar modelos."); })
+      .finally(function() { setFipeLoad(false); });
+  }
+  function onModelo(e) {
+    var id = e.target.value; setFipeModelo(id); setFipeAno(""); setFipeAnos([]); setFipeValor(null);
+    if (!id) return;
+    setFipeLoad(true);
+    fGet(FIPE + "/brands/" + fipeMarca + "/models/" + id + "/years")
+      .then(function(d) { setFipeAnos(d || []); })
+      .catch(function() { setFipeError("Erro ao carregar anos."); })
+      .finally(function() { setFipeLoad(false); });
+  }
+  function onAno(e) {
+    var id = e.target.value; setFipeAno(id); setFipeValor(null);
+    if (!id) return;
+    setFipeLoad(true);
+    fGet(FIPE + "/brands/" + fipeMarca + "/models/" + fipeModelo + "/years/" + id)
+      .then(function(d) {
+        if (!d || !d.price) throw new Error("sem valor");
+        var num = parseFloat(d.price.replace(/[^0-9,]/g,"").replace(",",".")) || 0;
+        setFipeValor({ valor: num, valorStr: d.price, modelo: d.model||"", marca: d.brand||"", ano: d.modelYear||"" });
+        if (!custoAquisicao && num > 0) setCustoAquisicao(String(Math.round(num)));
+      })
+      .catch(function() { setFipeError("Erro ao buscar preço."); })
+      .finally(function() { setFipeLoad(false); });
+  }
+
+  // ─── Parâmetros veículo ──────────────────────────────────────────────────────
+  var [custoAquisicao, setCustoAquisicao] = React.useState("");
+  var [valorResidual,  setValorResidual]  = React.useState("30");
+  var [vidaUtilAnos,   setVidaUtilAnos]   = React.useState("4");
+  var [taxaDepreciacao,setTaxaDepreciacao]= React.useState("linear");
+  var [depManual,      setDepManual]      = React.useState("");
+  var [categoria,      setCategoria]      = React.useState("popular");
+
+  // ─── Operação / km ──────────────────────────────────────────────────────────
+  var [kmMensal,       setKmMensal]       = React.useState("2000");
+  var [taxaOcupacao,   setTaxaOcupacao]   = React.useState("70");
+  var [margemDesejada, setMargemDesejada] = React.useState("25");
+  var [tributacao,     setTributacao]     = React.useState("6");
+
+  // ─── Custos editáveis ────────────────────────────────────────────────────────
+  var [seguroAnual,    setSeguroAnual]    = React.useState("");
+
+  // ─── Período base para dados reais ──────────────────────────────────────────
+  var [mesesBase, setMesesBase] = React.useState("3");
+
+  // ─── Benchmarks por categoria ────────────────────────────────────────────────
+  // custoKm: custo de manutenção por km (sem combustível — locadora não paga comb.)
+  // seguroAliq: % sobre valor do veículo/ano
+  // mercadoDiaria: { min, med, max } diária de mercado (Localiza/Movida/Kayak 2025)
+  var benchmarks = {
+    popular: { depAnual: 0.08, seguroAliq: 0.035, custoKm: 0.11, mercadoDiaria: { min: 90,  med: 120, max: 150 } },
+    medio:   { depAnual: 0.10, seguroAliq: 0.045, custoKm: 0.17, mercadoDiaria: { min: 130, med: 165, max: 200 } },
+    suv:     { depAnual: 0.11, seguroAliq: 0.055, custoKm: 0.23, mercadoDiaria: { min: 180, med: 240, max: 320 } },
+    premium: { depAnual: 0.15, seguroAliq: 0.07,  custoKm: 0.35, mercadoDiaria: { min: 300, med: 420, max: 600 } },
+  };
+  var bench = benchmarks[categoria] || benchmarks.popular;
+
+  var custo    = parseFloat(custoAquisicao) || 0;
+  var residual = (parseFloat(valorResidual)  || 30) / 100;
+  var vidaUtil = parseFloat(vidaUtilAnos)    || 4;
+  var ocup     = (parseFloat(taxaOcupacao)   || 70) / 100;
+  var margem   = (parseFloat(margemDesejada) || 25) / 100;
+  var tribAliq = (parseFloat(tributacao)     || 6)  / 100;
+  var kmMes    = parseFloat(kmMensal) || 2000;
+
+  // ─── Depreciação ────────────────────────────────────────────────────────────
+  var depMensalCalc = 0;
+  if (custo > 0) {
+    if (taxaDepreciacao === "linear") {
+      depMensalCalc = (custo * (1 - residual)) / (vidaUtil * 12);
+    } else if (taxaDepreciacao === "manual") {
+      depMensalCalc = custo * ((parseFloat(depManual)||0)/100) / 12;
+    } else { // benchmark
+      depMensalCalc = custo * bench.depAnual / 12;
+    }
+  }
+
+  // ─── IPVA 2% (benefício locadora) ────────────────────────────────────────────
+  var ipvaM = custo > 0 ? custo * 0.02 / 12 : 0;
+
+  // ─── Seguro ─────────────────────────────────────────────────────────────────
+  var seguroM = seguroAnual !== ""
+    ? parseFloat(seguroAnual) / 12
+    : custo > 0 ? custo * bench.seguroAliq / 12 : 0;
+
+  // ─── Manutenção por km ──────────────────────────────────────────────────────
+  // Usa dados reais da locadora SE disponíveis, senão: km × custo/km do benchmark
+  var custosReaisManut = React.useMemo(function() {
+    var n = parseInt(mesesBase) || 3;
+    var meses = [];
+    for (var i = 0; i < n; i++) {
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push(d.toISOString().slice(0,7));
+    }
+    var total = 0, count = 0;
+    manutencoes.forEach(function(m) {
+      var ref = (m.data_previsao_pagamento || m.data_pagamento || m.data_entrada || "").slice(0,7);
+      if (meses.includes(ref)) { total += parseFloat(m.custo)||0; count++; }
+    });
+    var nV = Math.max(1, veiculos.filter(function(v){ return v.status!=="inativo"; }).length);
+    return n > 0 ? total / n / nV : 0;
+  }, [manutencoes, veiculos, mesesBase]);
+
+  var manutBenchmark = kmMes * bench.custoKm;
+  var manutM = custosReaisManut > 0 ? custosReaisManut : manutBenchmark;
+  var temDadosManut = custosReaisManut > 0;
+
+  // ─── Despesas fixas da locadora ÷ veículos ──────────────────────────────────
+  // Pega despesas SEM vínculo a veículo específico (recorrentes da empresa)
+  var despFixasLocadora = React.useMemo(function() {
+    var n = parseInt(mesesBase) || 3;
+    var meses = [];
+    for (var i = 0; i < n; i++) {
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push(d.toISOString().slice(0,7));
+    }
+    var total = 0;
+    despesas.forEach(function(d) {
+      var ref = (d.previsao_pagamento || d.data_fim || "").slice(0,7);
+      // Inclui despesas sem vínculo a veículo (veiculo_id null/vazio) ou recorrentes
+      var semVeiculo = !d.veiculo_id || d.veiculo_id === "" || d.veiculo_id === null;
+      if (meses.includes(ref) && d.status !== "cancelada" && semVeiculo) {
+        total += parseFloat(d.valor) || 0;
+      }
+    });
+    var nV = Math.max(1, veiculos.filter(function(v){ return v.status !== "inativo"; }).length);
+    return { total: n > 0 ? total / n : 0, porVeiculo: n > 0 ? total / n / nV : 0, nVeiculos: nV };
+  }, [despesas, veiculos, mesesBase]);
+
+  var despFixaM = despFixasLocadora.porVeiculo;
+  var temDespFixas = despFixaM > 0;
+
+  // ─── Multas médias por veículo ────────────────────────────────────────────────
+  var multaM = React.useMemo(function() {
+    var n = parseInt(mesesBase) || 3;
+    var meses = [];
+    for (var i = 0; i < n; i++) {
+      var d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push(d.toISOString().slice(0,7));
+    }
+    var total = 0;
+    multas.forEach(function(m) {
+      var ref = (m.data_infracao || "").slice(0,7);
+      if (meses.includes(ref)) {
+        var val = parseFloat(m.valor) || 0;
+        if (m.cobrado_cliente === "pago") val = Math.max(0, val - (parseFloat(m.valor_cobrado)||0));
+        total += val;
+      }
+    });
+    var nV = Math.max(1, veiculos.filter(function(v){ return v.status!=="inativo"; }).length);
+    return n > 0 ? total / n / nV : 0;
+  }, [multas, veiculos, mesesBase]);
+
+  // ─── TOTAIS ──────────────────────────────────────────────────────────────────
+  var totalCustoMensal = depMensalCalc + ipvaM + seguroM + manutM + despFixaM + multaM;
+  var denom            = ocup * (1 - tribAliq - margem);
+  var receitaMin       = denom > 0 ? totalCustoMensal / denom : 0;
+  var receitaZero      = ocup * (1 - tribAliq) > 0 ? totalCustoMensal / (ocup * (1 - tribAliq)) : 0;
+  var diasOcup         = 30 * ocup;
+  var diariaSugerida   = diasOcup > 0 ? receitaMin / diasOcup : 0;
+  var lucroLiq         = receitaMin * (1 - tribAliq) * margem;
+  var payback          = lucroLiq > 0 ? custo / lucroLiq : 99999;
+  var roiAnual         = custo > 0 ? (lucroLiq * 12) / custo * 100 : 0;
+
+  // ─── Comparativo FIPE ────────────────────────────────────────────────────────
+  var difFipe = fipeValor && fipeValor.valor > 0
+    ? ((custo - fipeValor.valor) / fipeValor.valor) * 100 : null;
+
+  // ─── Comparativo mercado ─────────────────────────────────────────────────────
+  var mkt = bench.mercadoDiaria;
+
+  function fmtR(v) { return "R$ " + (v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtN(v, d) { return (v||0).toLocaleString("pt-BR",{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
+
+  var semCusto = custo <= 0;
+  var labelCat = { popular:"Popular (Argo, HB20, Mobi)", medio:"Médio (Corolla, Cruze, Virtus)", suv:"SUV (Creta, Compass, Kicks)", premium:"Premium (Hilux, RAV4, SW4+)" };
+
+  // helper: select style
+  var selStyle = { width:"100%", padding:"9px 12px", borderRadius:10, border:"1.5px solid rgba(0,0,0,0.12)", fontSize:13, background:"white", outline:"none", color:"#1C1C1E" };
+  var inpStyle = { width:"100%", boxSizing:"border-box", padding:"9px 12px", borderRadius:10, border:"1.5px solid rgba(0,0,0,0.12)", fontSize:13, background:"white", outline:"none", color:"#1C1C1E" };
+
+  return React.createElement('div', { style: { maxWidth: 700 } },
+
+    // ── Header ──────────────────────────────────────────────────────────────────
+    React.createElement('div', { style: { marginBottom: 20 } },
+      React.createElement('h2', { style: { fontSize: 22, fontWeight: 800, color: "#1C1C1E", margin: 0 } }, "Simulador de Rentabilidade"),
+      React.createElement('p',  { style: { fontSize: 13, color: C.sub, margin: "4px 0 0" } },
+        "Calcule o valor mínimo de locação e compare com o preço de mercado.")
+    ),
+
+    // ── FIPE ─────────────────────────────────────────────────────────────────────
+    React.createElement('div', { className: "lg-card", style: { marginBottom: 16, padding: 20 } },
+      React.createElement('div', { style: { fontSize: 14, fontWeight: 700, color: "#AF52DE", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 } },
+        "🔍 Consulta Tabela FIPE",
+        fipeLoad && React.createElement('span', { style: { fontSize: 11, color: C.sub, fontWeight: 400 } }, " carregando..."),
+        !fipeLoad && fipeMarcas.length === 0 && !fipeError && React.createElement('span', { style: { fontSize: 11, color: C.sub, fontWeight: 400 } }, " — offline, preencha o custo manualmente")
+      ),
+      fipeError && React.createElement('div', { style: { background:"rgba(255,59,48,0.08)", border:"1px solid rgba(255,59,48,0.2)", borderRadius:8, padding:"8px 12px", fontSize:12, color:C.red, marginBottom:10 } }, fipeError),
+
+      React.createElement('div', { style: { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 } },
+        React.createElement('div', null,
+          React.createElement('label', { style: { fontSize:11, color:C.sub, display:"block", marginBottom:4 } }, "Marca"),
+          React.createElement('select', { value:fipeMarca, onChange:onMarca, disabled:fipeMarcas.length===0, style:selStyle },
+            React.createElement('option', { value:"" }, fipeMarcas.length===0 ? "—" : "Selecione..."),
+            fipeMarcas.map(function(m){ return React.createElement('option',{key:m.code||m.id, value:m.code||m.id}, m.name||m.marca); })
+          )
+        ),
+        React.createElement('div', null,
+          React.createElement('label', { style: { fontSize:11, color:C.sub, display:"block", marginBottom:4 } }, "Modelo"),
+          React.createElement('select', { value:fipeModelo, onChange:onModelo, disabled:!fipeMarca||fipeModelos.length===0, style:selStyle },
+            React.createElement('option', { value:"" }, fipeMarca ? "Selecione..." : "— primeiro marca —"),
+            fipeModelos.map(function(m){ return React.createElement('option',{key:m.code||m.id, value:m.code||m.id}, m.name||m.modelo); })
+          )
+        ),
+        React.createElement('div', null,
+          React.createElement('label', { style: { fontSize:11, color:C.sub, display:"block", marginBottom:4 } }, "Ano / Comb."),
+          React.createElement('select', { value:fipeAno, onChange:onAno, disabled:!fipeModelo||fipeAnos.length===0, style:selStyle },
+            React.createElement('option', { value:"" }, fipeModelo ? "Selecione..." : "— primeiro modelo —"),
+            fipeAnos.map(function(a){ return React.createElement('option',{key:a.code||a.id, value:a.code||a.id}, a.name||a.ano); })
+          )
+        )
+      ),
+
+      fipeValor && React.createElement('div', { style: { marginTop:14, background:"rgba(175,82,222,0.07)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 } },
+        React.createElement('div', null,
+          React.createElement('div', { style: { fontSize:11, color:C.sub } }, (fipeValor.marca||"") + " " + (fipeValor.modelo||"") + " " + (fipeValor.ano||"")),
+          React.createElement('div', { style: { fontSize:22, fontWeight:900, color:"#AF52DE" } }, fipeValor.valorStr || fmtR(fipeValor.valor)),
+          difFipe !== null && React.createElement('div', { style: { fontSize:12, marginTop:2, color: Math.abs(difFipe)<5?C.green:difFipe>0?C.red:C.orange, fontWeight:600 } },
+            difFipe > 0 ? "⚠️ Custo " + fmtN(difFipe,1) + "% acima da FIPE"
+            : difFipe < -1 ? "✅ " + fmtN(Math.abs(difFipe),1) + "% abaixo da FIPE — ótimo negócio!"
+            : "✅ Preço em linha com a FIPE"
+          )
+        ),
+        React.createElement('button', { onClick: function(){ setCustoAquisicao(String(Math.round(fipeValor.valor))); },
+          className: "lg-pill lg-purple", style: { fontSize:12, padding:"7px 14px" } },
+          custo > 0 && custo === Math.round(fipeValor.valor) ? "✓ Aplicado" : "Usar valor FIPE"
+        )
+      )
+    ),
+
+    // ── Veículo & Depreciação ─────────────────────────────────────────────────────
+    React.createElement('div', { className:"lg-card", style:{ marginBottom:16, padding:20 } },
+      React.createElement('div', { style:{ fontSize:14, fontWeight:700, color:C.blue, marginBottom:14 } }, "🚗 Veículo & Depreciação"),
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 } },
+
+        React.createElement('div', { style:{ gridColumn:"1 / -1" } },
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Custo de Aquisição (R$) *"),
+          React.createElement('input', { type:"number", placeholder: fipeValor ? "ou use a FIPE: " + fipeValor.valorStr : "Ex: 75000",
+            value:custoAquisicao, onChange:function(e){ setCustoAquisicao(e.target.value); },
+            style:{ ...inpStyle, fontSize:16, fontWeight:700, border:"1.5px solid rgba(0,122,255,0.3)", background:"rgba(0,122,255,0.04)" } })
+        ),
+
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Categoria"),
+          React.createElement('select', { value:categoria, onChange:function(e){ setCategoria(e.target.value); }, style:selStyle },
+            Object.entries(labelCat).map(function([k,v]){ return React.createElement('option',{key:k,value:k},v); })
+          )
+        ),
+
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Vida útil na frota"),
+          React.createElement('select', { value:vidaUtilAnos, onChange:function(e){ setVidaUtilAnos(e.target.value); }, style:selStyle },
+            ["2","3","4","5","6"].map(function(v){ return React.createElement('option',{key:v,value:v}, v + " anos"); })
+          )
+        ),
+
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Valor residual na venda (%)"),
+          React.createElement('input', { type:"number", min:0, max:80, value:valorResidual, onChange:function(e){ setValorResidual(e.target.value); }, style:inpStyle })
+        ),
+
+        React.createElement('div', { style:{ gridColumn:"1 / -1" } },
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:6 } }, "Método de depreciação"),
+          React.createElement('div', { style:{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" } },
+            [["linear","Linear (vida útil + residual)"],["benchmark","Benchmark (" + (bench.depAnual*100).toFixed(0) + "% a.a.)"],["manual","Manual"]].map(function([v,l]){
+              return React.createElement('button', { key:v, onClick:function(){ setTaxaDepreciacao(v); },
+                className:"lg-pill"+(taxaDepreciacao===v?" lg-blue":" lg-ghost"), style:{ fontSize:12, padding:"5px 12px" } }, l);
+            }),
+            taxaDepreciacao === "manual" && React.createElement('input', { type:"number", placeholder:"% a.a.", value:depManual, onChange:function(e){ setDepManual(e.target.value); },
+              style:{ width:80, padding:"7px 10px", borderRadius:10, border:"1.5px solid rgba(0,0,0,0.12)", fontSize:13, background:"white", outline:"none" } })
+          ),
+          custo > 0 && React.createElement('div', { style:{ marginTop:6, fontSize:12, color:C.green, fontWeight:600 } },
+            "→ Depreciação: " + fmtR(depMensalCalc) + "/mês  |  IPVA 2%: " + fmtR(ipvaM) + "/mês"
+          )
+        )
+      )
+    ),
+
+    // ── Operação ──────────────────────────────────────────────────────────────────
+    React.createElement('div', { className:"lg-card", style:{ marginBottom:16, padding:20 } },
+      React.createElement('div', { style:{ fontSize:14, fontWeight:700, color:C.teal, marginBottom:14 } }, "⚙️ Operação"),
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 } },
+
+        // KM mensal
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Quilometragem mensal estimada"),
+          React.createElement('input', { type:"number", placeholder:"Ex: 2000", value:kmMensal, onChange:function(e){ setKmMensal(e.target.value); }, style:inpStyle }),
+          React.createElement('div', { style:{ fontSize:11, color:C.sub, marginTop:4 } }, "Custo/km manutenção: R$ " + bench.custoKm.toFixed(2) + " (benchmark " + categoria + ")")
+        ),
+
+        // Taxa ocupação
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:6 } }, "Taxa de ocupação: " + taxaOcupacao + "% ≈ " + Math.round(30*ocup) + " dias/mês"),
+          React.createElement('input', { type:"range", min:30, max:95, value:taxaOcupacao, onChange:function(e){ setTaxaOcupacao(e.target.value); }, style:{ width:"100%", accentColor:C.teal } }),
+          React.createElement('div', { style:{ display:"flex", justifyContent:"space-between", fontSize:10, color:C.sub } },
+            React.createElement('span',null,"30%"), React.createElement('span',null,"70% típico"), React.createElement('span',null,"95%"))
+        ),
+
+        // Margem
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:6 } }, "Margem de lucro: " + margemDesejada + "%"),
+          React.createElement('input', { type:"range", min:5, max:50, value:margemDesejada, onChange:function(e){ setMargemDesejada(e.target.value); }, style:{ width:"100%", accentColor:C.blue } }),
+          React.createElement('div', { style:{ display:"flex", justifyContent:"space-between", fontSize:10, color:C.sub } },
+            React.createElement('span',null,"5%"), React.createElement('span',null,"≥20% saudável"), React.createElement('span',null,"50%"))
+        ),
+
+        // Tributação
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:6 } }, "Tributação (% da receita bruta)"),
+          React.createElement('div', { style:{ display:"flex", gap:6, flexWrap:"wrap" } },
+            [["4","4%"],["6","6%"],["8","8%"],["12.5","12,5%"]].map(function([v,l]){
+              return React.createElement('button', { key:v, onClick:function(){ setTributacao(v); },
+                className:"lg-pill"+(tributacao===v?" lg-purple":" lg-ghost"), style:{ fontSize:11, padding:"4px 9px" } }, l);
+            })
+          )
+        )
+      )
+    ),
+
+    // ── Custos Fixos ──────────────────────────────────────────────────────────────
+    React.createElement('div', { className:"lg-card", style:{ marginBottom:16, padding:20 } },
+      React.createElement('div', { style:{ fontSize:14, fontWeight:700, color:C.orange, marginBottom:10, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 } },
+        React.createElement('span', null, "💸 Custos Fixos Mensais / Veículo"),
+        React.createElement('div', { style:{ display:"flex", gap:6, alignItems:"center" } },
+          React.createElement('span', { style:{ fontSize:11, color:C.sub } }, "Base:"),
+          ["1","3","6"].map(function(m){
+            return React.createElement('button', { key:m, onClick:function(){ setMesesBase(m); },
+              className:"lg-pill"+(mesesBase===m?" lg-orange":" lg-ghost"), style:{ fontSize:11, padding:"4px 9px" } }, m + (m==="1"?" mês":" meses"));
+          })
+        )
+      ),
+
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 } },
+
+        // Seguro — editável
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } },
+            "Seguro anual (R$)",
+            custo > 0 && seguroAnual === "" && React.createElement('span', { style:{ color:C.blue, marginLeft:4 } }, "← ref: R$ " + Math.round(custo*bench.seguroAliq).toLocaleString("pt-BR"))
+          ),
+          React.createElement('input', { type:"number", placeholder: custo > 0 ? String(Math.round(custo*bench.seguroAliq)) : "Ex: 3500",
+            value:seguroAnual, onChange:function(e){ setSeguroAnual(e.target.value); }, style:inpStyle })
+        ),
+
+        // Manutenção por km
+        React.createElement('div', null,
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } },
+            temDadosManut ? "Manutenção (dados reais)" : "Manutenção por km"
+          ),
+          React.createElement('div', { style:{ padding:"9px 12px", borderRadius:10, background: temDadosManut?"rgba(52,199,89,0.06)":"rgba(0,122,255,0.04)", border:"1.5px solid "+(temDadosManut?"rgba(52,199,89,0.3)":"rgba(0,122,255,0.2)"), fontSize:14, fontWeight:700, color:"#1C1C1E" } },
+            fmtR(manutM) + "/mês"
+          ),
+          React.createElement('div', { style:{ fontSize:10, color:C.sub, marginTop:3 } },
+            temDadosManut
+              ? "✅ Média real últimos " + mesesBase + " meses (÷ " + despFixasLocadora.nVeiculos + " veíc.)"
+              : "Benchmark: " + kmMes.toLocaleString("pt-BR") + " km × R$" + bench.custoKm + "/km"
+          )
+        ),
+
+        // Despesas fixas locadora
+        React.createElement('div', { style:{ gridColumn:"1 / -1" } },
+          React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Despesas fixas da locadora (alvarás, contabilidade, internet...)"),
+          React.createElement('div', { style:{ borderRadius:10, background: temDespFixas?"rgba(52,199,89,0.06)":"rgba(255,149,0,0.06)", border:"1.5px solid "+(temDespFixas?"rgba(52,199,89,0.3)":"rgba(255,149,0,0.2)"), padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" } },
+            React.createElement('div', null,
+              React.createElement('div', { style:{ fontSize:14, fontWeight:700, color:"#1C1C1E" } }, fmtR(despFixaM) + "/veiculo/mês"),
+              React.createElement('div', { style:{ fontSize:11, color:C.sub, marginTop:2 } },
+                temDespFixas
+                  ? "✅ " + fmtR(despFixasLocadora.total) + "/mês total ÷ " + despFixasLocadora.nVeiculos + " veículos (despesas sem vínculo a veículo)"
+                  : "⚠️ Nenhuma despesa fixa encontrada no período. Cadastre no Financeiro > Despesas."
+              )
+            ),
+            temDespFixas && React.createElement('div', { style:{ fontSize:20, fontWeight:800, color:C.green } }, "÷" + despFixasLocadora.nVeiculos)
+          )
+        )
+      )
+    ),
+
+    // ── RESULTADO ─────────────────────────────────────────────────────────────────
+    !semCusto && React.createElement('div', { style:{ marginBottom:16 } },
+
+      // Banner principal
+      React.createElement('div', { style:{ background:"linear-gradient(135deg,#007AFF 0%,#5AC8FA 100%)", borderRadius:18, padding:"22px 24px 18px", color:"white", marginBottom:12, boxShadow:"0 8px 32px rgba(0,122,255,0.22)" } },
+        React.createElement('div', { style:{ fontSize:12, opacity:0.85, marginBottom:2 } }, "💡 Valor mínimo de locação mensal"),
+        React.createElement('div', { style:{ fontSize:36, fontWeight:900, letterSpacing:-1, marginBottom:2 } }, fmtR(receitaMin)),
+        React.createElement('div', { style:{ fontSize:12, opacity:0.8 } },
+          "para cobrir custos + " + margemDesejada + "% de margem com " + taxaOcupacao + "% de ocupação"),
+        React.createElement('div', { style:{ marginTop:12, display:"flex", gap:10, flexWrap:"wrap" } },
+          React.createElement('div', { style:{ padding:"8px 14px", background:"rgba(255,255,255,0.18)", borderRadius:10 } },
+            React.createElement('div', { style:{ fontSize:10, opacity:0.85 } }, "Diária mínima"),
+            React.createElement('div', { style:{ fontSize:18, fontWeight:800 } }, fmtR(diariaSugerida) + "/dia")),
+          React.createElement('div', { style:{ padding:"8px 14px", background:"rgba(255,255,255,0.18)", borderRadius:10 } },
+            React.createElement('div', { style:{ fontSize:10, opacity:0.85 } }, "Ponto de equilíbrio (sem margem)"),
+            React.createElement('div', { style:{ fontSize:18, fontWeight:800 } }, fmtR(receitaZero) + "/mês"))
+        )
+      ),
+
+      // ── Comparativo com mercado ──────────────────────────────────────────────
+      React.createElement('div', { className:"lg-card", style:{ marginBottom:12, padding:18 } },
+        React.createElement('div', { style:{ fontSize:13, fontWeight:700, color:"#1C1C1E", marginBottom:12 } }, "📊 Comparativo com o mercado — diária " + labelCat[categoria]),
+
+        // Barra de mercado
+        React.createElement('div', { style:{ position:"relative", marginBottom:12 } },
+          React.createElement('div', { style:{ display:"flex", justifyContent:"space-between", fontSize:11, color:C.sub, marginBottom:4 } },
+            React.createElement('span',null,"Mín R$ " + mkt.min), React.createElement('span',null,"Mercado"), React.createElement('span',null,"Máx R$ " + mkt.max)
+          ),
+          React.createElement('div', { style:{ background:"#F2F2F7", borderRadius:8, height:24, position:"relative", overflow:"hidden" } },
+            // faixa de mercado
+            React.createElement('div', { style:{ position:"absolute", left:0, top:0, bottom:0, width:"100%", background:"rgba(52,199,89,0.12)", borderRadius:8 } }),
+            // marcador médio mercado
+            React.createElement('div', { style:{ position:"absolute", top:0, bottom:0, left: ((mkt.med - mkt.min)/(mkt.max - mkt.min)*100).toFixed(0)+"%", width:3, background:C.green, borderRadius:2 } }),
+            // marcador minha diária
+            (function(){
+              var pct = Math.min(100, Math.max(0, ((diariaSugerida - mkt.min)/(mkt.max - mkt.min)*100)));
+              var cor = diariaSugerida < mkt.min ? C.orange : diariaSugerida > mkt.max ? C.red : C.blue;
+              return React.createElement('div', { style:{ position:"absolute", top:0, bottom:0, left:pct.toFixed(0)+"%", width:4, background:cor, borderRadius:2, boxShadow:"0 0 6px " + cor } });
+            })()
+          ),
+          React.createElement('div', { style:{ display:"flex", justifyContent:"space-between", fontSize:11, marginTop:6, flexWrap:"wrap", gap:4 } },
+            React.createElement('span', { style:{ color:C.green } }, "● Média mercado: " + fmtR(mkt.med) + "/dia"),
+            React.createElement('span', { style:{ color: diariaSugerida < mkt.min ? C.orange : diariaSugerida > mkt.max ? C.red : C.blue } },
+              "● Sua diária mínima: " + fmtR(diariaSugerida) + "/dia")
+          )
+        ),
+
+        // Análise de posicionamento
+        (function(){
+          var gap = diariaSugerida - mkt.med;
+          var pct = mkt.med > 0 ? (gap/mkt.med*100) : 0;
+          var msg, cor, icon;
+          if (diariaSugerida < mkt.min) {
+            msg = "Diária mínima abaixo do mercado — verifique se os custos estão completos."; cor = C.orange; icon = "⚠️";
+          } else if (diariaSugerida <= mkt.med) {
+            msg = "Posição competitiva: " + fmtN(Math.abs(pct),1) + "% abaixo da média. Espaço para aumentar a margem ou preço."; cor = C.green; icon = "✅";
+          } else if (diariaSugerida <= mkt.max) {
+            msg = "Na faixa alta do mercado (" + fmtN(pct,1) + "% acima da média). Justifique com diferenciação ou revise custos."; cor = C.orange; icon = "⚠️";
+          } else {
+            msg = "Acima do teto de mercado. Reavalie a viabilidade do investimento nesta categoria."; cor = C.red; icon = "❌";
+          }
+          return React.createElement('div', { style:{ background:"rgba(0,0,0,0.03)", borderRadius:10, padding:"10px 12px", fontSize:12, color:cor, fontWeight:600 } },
+            icon + " " + msg
+          );
+        })(),
+
+        // Receita potencial com preço médio
+        React.createElement('div', { style:{ marginTop:10, display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 } },
+          [["Mín mercado", mkt.min],["Média mercado", mkt.med],["Máx mercado", mkt.max]].map(function([l,d]){
+            var recPot = d * diasOcup;
+            var lucroPot = recPot * (1 - tribAliq) - totalCustoMensal;
+            return React.createElement('div', { key:l, style:{ background:"white", border:"1px solid rgba(0,0,0,0.07)", borderRadius:10, padding:"10px 12px", textAlign:"center" } },
+              React.createElement('div', { style:{ fontSize:10, color:C.sub, marginBottom:2 } }, l),
+              React.createElement('div', { style:{ fontSize:14, fontWeight:700, color:"#1C1C1E" } }, "R$ " + d + "/dia"),
+              React.createElement('div', { style:{ fontSize:11, color: lucroPot >= 0 ? C.green : C.red, fontWeight:600, marginTop:3 } },
+                (lucroPot >= 0 ? "Lucro: +" : "Prejuízo: ") + fmtR(Math.abs(lucroPot)) + "/mês"
+              )
+            );
+          })
+        )
+      ),
+
+      // Métricas
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:12 } },
+        [
+          ["Custo Total/mês", fmtR(totalCustoMensal), C.red,   "por veículo"],
+          ["Lucro Líq./mês",  fmtR(lucroLiq),         C.green, "com diária mínima"],
+          ["ROI Anual",       fmtN(roiAnual,1)+"%",   roiAnual>=15?C.green:roiAnual>=8?C.orange:C.red, roiAnual>=15?"✅ Excelente":roiAnual>=8?"⚠️ Razoável":"❌ Baixo"],
+        ].map(function([t,v,cor,sub]){
+          return React.createElement('div', { key:t, className:"lg-card", style:{ padding:"14px 12px", textAlign:"center" } },
+            React.createElement('div', { style:{ fontSize:10, color:C.sub, marginBottom:4 } }, t),
+            React.createElement('div', { style:{ fontSize:16, fontWeight:800, color:cor } }, v),
+            React.createElement('div', { style:{ fontSize:10, color:C.sub, marginTop:2 } }, sub));
+        })
+      ),
+
+      // Payback
+      React.createElement('div', { className:"lg-card", style:{ padding:"14px 18px", display:"flex", alignItems:"center", gap:14, marginBottom:12 } },
+        React.createElement('div', { style:{ fontSize:28 } }, payback<=36?"🏆":payback<=60?"⏱️":"⚠️"),
+        React.createElement('div', null,
+          React.createElement('div', { style:{ fontSize:11, color:C.sub } }, "Payback — tempo para recuperar o investimento"),
+          React.createElement('div', { style:{ fontSize:18, fontWeight:800, color:"#1C1C1E" } },
+            payback < 9999 ? fmtN(payback,0) + " meses (" + fmtN(payback/12,1) + " anos)" : "—"),
+          React.createElement('div', { style:{ fontSize:11, fontWeight:600, color:payback<=36?C.green:payback<=60?C.orange:C.red } },
+            payback<=36?"Excelente: abaixo de 3 anos":payback<=60?"Razoável: 3–5 anos":"Alto: acima de 5 anos")
+        )
+      ),
+
+      // Composição dos custos
+      React.createElement('div', { className:"lg-card", style:{ padding:18 } },
+        React.createElement('div', { style:{ fontSize:13, fontWeight:700, color:"#1C1C1E", marginBottom:12 } }, "📋 Composição dos Custos Mensais por Veículo"),
+        [
+          ["Depreciação",         depMensalCalc, taxaDepreciacao === "linear" ? "linear s/ vida útil" : "benchmark cat."],
+          ["IPVA (2% a.a.)",      ipvaM,         "benefício locadora"],
+          ["Seguro",              seguroM,       seguroAnual !== "" ? "editado manualmente" : "benchmark " + (bench.seguroAliq*100).toFixed(1)+"% a.a."],
+          ["Manutenção",          manutM,        temDadosManut ? "dados reais" : kmMes.toLocaleString("pt-BR") + " km × R$" + bench.custoKm + "/km"],
+          ["Despesas fixas",      despFixaM,     temDespFixas ? "locadora ÷ " + despFixasLocadora.nVeiculos + " veíc." : "sem dados cadastrados"],
+          ["Multas (líq.)",       multaM,        "dados reais"],
+        ].map(function([l,v,sub]){
+          var pct = totalCustoMensal > 0 ? v/totalCustoMensal : 0;
+          return React.createElement('div', { key:l, style:{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:"1px solid rgba(0,0,0,0.05)" } },
+            React.createElement('div', null,
+              React.createElement('div', { style:{ fontSize:13, color:"#3C3C43" } }, l),
+              React.createElement('div', { style:{ fontSize:10, color:C.sub } }, sub)
+            ),
+            React.createElement('div', { style:{ display:"flex", alignItems:"center", gap:8 } },
+              React.createElement('div', { style:{ width:Math.round(pct*80)+"px", height:5, borderRadius:3, background:"rgba(0,122,255,0.2)", minWidth:3 } }),
+              React.createElement('span', { style:{ fontSize:13, fontWeight:600, color:"#1C1C1E", minWidth:90, textAlign:"right" } }, fmtR(v))
+            )
+          );
+        }),
+        React.createElement('div', { style:{ display:"flex", justifyContent:"space-between", paddingTop:10, fontWeight:800, borderTop:"2px solid rgba(0,0,0,0.06)" } },
+          React.createElement('span', { style:{ fontSize:14 } }, "Total"),
+          React.createElement('span', { style:{ fontSize:14, color:C.red } }, fmtR(totalCustoMensal))
+        )
+      )
+    ),
+
+    // Placeholder sem custo
+    semCusto && React.createElement('div', { className:"lg-card", style:{ padding:32, textAlign:"center", opacity:0.5 } },
+      React.createElement('div', { style:{ fontSize:36, marginBottom:10 } }, "🧮"),
+      React.createElement('div', { style:{ fontSize:15, fontWeight:700 } }, "Informe o custo de aquisição"),
+      React.createElement('div', { style:{ fontSize:13, color:C.sub, marginTop:4 } }, "Use a consulta FIPE acima ou preencha manualmente")
+    ),
+
+    React.createElement('div', { style:{ fontSize:11, color:C.sub, marginTop:16, padding:"0 4px", lineHeight:1.6 } },
+      "ⓘ IPVA 2% a.a. (benefício locadoras SP/MG/RS). Manutenção por km: benchmark por categoria (popular R$0,11/km, médio R$0,17/km, SUV R$0,23/km, premium R$0,35/km — sem combustível). Despesas fixas: rateio automático das despesas sem vínculo a veículo cadastradas no Financeiro. Diárias de mercado: Localiza/Movida/Kayak 2025. FIPE via Parallelum (API pública gratuita). Consulte seu contador."
+    )
+  );
+}
+
 function App() {
   const [logado, setLogado] = useState(false);
   const [tab, setTab] = useState("inicio");
@@ -17021,7 +17595,8 @@ function App() {
     if (tab === "manutencao") return React.createElement(Manutencao, { ...props, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3211}} );
     if (tab === "financeiro") return React.createElement(Financeiro, { ...props, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3212}} );
     if (tab === "relatorios") return React.createElement(Relatorios, { ...props, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3213}} );
-    if (tab === "config") return React.createElement(Config, { empresa: empresa, setEmpresa: setEmpresa, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3214}} );
+    if (tab === "simulador") return React.createElement(Simulador, { veiculos: veiculos, contratos: contratos, despesas: despesas, manutencoes: manutencoes, multas: multas, receitas: receitas, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3214}} );
+    if (tab === "config") return React.createElement(Config, { empresa: empresa, setEmpresa: setEmpresa, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3215}} );
     if (tab === "calendario") return React.createElement(Calendario, { contratos: contratos, multas: multas, veiculos: veiculos, clientes: clientes, contas: contas, despesas: despesas, receitas: receitas, setTab: setTab, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3215}} );
     return null;
   }
