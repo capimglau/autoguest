@@ -212,13 +212,70 @@ input[type=file]{display:none}
 
 /* === NAV BOTTOM === */
 .lg-nav{
-  background:linear-gradient(0deg,rgba(255,255,255,0.62) 0%,rgba(240,244,255,0.50) 100%);
-  backdrop-filter:blur(44px) saturate(2.2) brightness(1.05);
-  -webkit-backdrop-filter:blur(44px) saturate(2.2) brightness(1.05);
-  border-top:0.5px solid rgba(255,255,255,0.82);
+  /* Floating pill — no border-top, no full-width bar */
+  background: none;
+  border-top: none;
+  box-shadow: none;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.lg-nav-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 6px;
+  justify-content: flex-start;
+  border-radius: 28px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.72) 0%, rgba(235,242,255,0.58) 100%);
+  backdrop-filter: blur(40px) saturate(2.2) brightness(1.06);
+  -webkit-backdrop-filter: blur(40px) saturate(2.2) brightness(1.06);
+  border: 0.5px solid rgba(255,255,255,0.88);
   box-shadow:
-    0 -2px 0 rgba(255,255,255,0.70),
-    0 -4px 20px rgba(80,100,200,0.08);
+    0 2px 0 rgba(255,255,255,0.92) inset,
+    0 -1px 0 rgba(0,0,0,0.05) inset,
+    0 8px 32px rgba(60,80,180,0.16),
+    0 2px 8px rgba(0,0,0,0.10),
+    0 0 0 0.5px rgba(200,210,240,0.30);
+  position: relative;
+  pointer-events: all;
+  overflow: hidden;
+}
+.lg-nav-pill::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 8%; right: 8%;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 0 0 50% 50%;
+  pointer-events: none;
+}
+.lg-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 22px;
+  min-width: 62px;
+  flex: 0 0 auto;
+  position: relative;
+  transition: background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lg-nav-btn:active {
+  background: rgba(0,0,0,0.06);
+}
+.lg-nav-btn-active {
+  background: linear-gradient(160deg, rgba(255,255,255,0.90) 0%, rgba(220,232,255,0.75) 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.95) inset,
+    0 2px 8px rgba(0,122,255,0.18),
+    0 0 0 0.5px rgba(0,122,255,0.15);
 }
 </style>
 <script>(function(){
@@ -16069,12 +16126,31 @@ function Config({ empresa, setEmpresa, toast }) {
 }
 
 // -- APP --------------------------------------------------------------------
+function NavIcon({ id, active }) {
+  const color = active ? C.blue : C.sub;
+  const svg = ICONS[id].replace(/stroke="currentColor"/g, 'stroke="' + color + '"');
+  return React.createElement('span', {
+    dangerouslySetInnerHTML: { __html: svg },
+    style: { lineHeight: 1, display: 'flex', alignItems: 'center', flexShrink: 0 }
+  });
+}
+
 const TABS = [
   { id: "inicio", label: "Início" }, { id: "frota", label: "Frota" }, { id: "clientes", label: "Clientes" },
   { id: "contratos", label: "Contratos" }, { id: "multas", label: "Multas" }, { id: "manutencao", label: "Manutenção" },
   { id: "financeiro", label: "Financeiro" }, { id: "relatorios", label: "Relatórios" }, { id: "config", label: "Config" }
 ];
-const ICONS = { inicio: "⌂", frota: "◻", clientes: "♙", contratos: "☰", multas: "⚠", manutencao: "⚙", financeiro: "◈", relatorios: "▦", config: "☵" };
+const ICONS = {
+  inicio:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>',
+  frota:      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.5-4.5h11L19 11"/><rect x="2" y="11" width="20" height="7" rx="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M2 14h1M21 14h1"/></svg>',
+  clientes:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
+  contratos:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
+  multas:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  manutencao: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  financeiro: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6v2m0 8v2m-3-7h4.5a1.5 1.5 0 0 1 0 3H9a1.5 1.5 0 0 0 0 3H13m-1 0v2"/></svg>',
+  relatorios: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V13m4 4V9m4 8v-5"/></svg>',
+  config:     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+};
 
 function LoginScreen({ onLogin }) {
   const [pin, setPin] = useState("");
@@ -16246,16 +16322,17 @@ function App() {
   if (!logado) return React.createElement(LoginScreen, { onLogin: () => setLogado(true), __self: this, __source: {fileName: _jsxFileName, lineNumber: 3218}} );
 
   if (mobile) return (
-    React.createElement('div', { style: { minHeight: "100vh", paddingBottom: 96 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3221}}
+    React.createElement('div', { style: { minHeight: "100vh", paddingBottom: 110 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3221}}
       , React.createElement('div', { style: { padding: "16px 16px 0" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3222}}, page())
-      , React.createElement('nav', { className: "lg-nav", style: { position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", zIndex: 100, overflowX: "auto", paddingBottom: "env(safe-area-inset-bottom,0px)" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3223}}
-        , TABS.map(t => (
-          React.createElement('button', { key: t.id, onClick: () => setTab(t.id), style: { flex: "0 0 auto", background: "none", border: "none", padding: "10px 14px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 66 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3225}}
-            , tab === t.id && React.createElement('span', { className: "lg-tab-active", style: { position: "absolute", width: 52, height: 34, marginBottom: 18, zIndex: 0 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3226}} )
-            , React.createElement('span', { style: { fontSize: 20, lineHeight: 1, color: tab === t.id ? C.blue : C.sub, position: "relative", zIndex: 1 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3227}}, ICONS[t.id])
-            , React.createElement('span', { style: { fontSize: 10, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.blue : C.sub, whiteSpace: "nowrap", position: "relative", zIndex: 1 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3228}}, t.label)
-          )
-        ))
+      , React.createElement('nav', { className: "lg-nav", style: { position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 14px)", paddingTop: 8, paddingLeft: 16, paddingRight: 16 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3223}}
+        , React.createElement('div', { className: "lg-nav-pill", style: { overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", msOverflowStyle: "none", width: "100%", WebkitOverflowScrolling: "touch" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3224}}
+          , TABS.map(t => (
+            React.createElement('button', { key: t.id, onClick: () => setTab(t.id), className: "lg-nav-btn" + (tab === t.id ? " lg-nav-btn-active" : ""), __self: this, __source: {fileName: _jsxFileName, lineNumber: 3225}}
+              , React.createElement(NavIcon, { id: t.id, active: tab === t.id, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3226}})
+              , React.createElement('span', { style: { fontSize: 10, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? C.blue : C.sub, whiteSpace: "nowrap", position: "relative", zIndex: 1, letterSpacing: tab === t.id ? -0.2 : 0 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3227}}, t.label)
+            )
+          ))
+        )
       )
       , React.createElement(Toast, { msg: toastState.msg, type: toastState.type, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3232}} )
     )
@@ -16267,7 +16344,7 @@ function App() {
         , React.createElement('div', { style: { fontSize: 16, fontWeight: 800, color: C.blue, marginBottom: 20, paddingLeft: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3239}}, "AutoGest Pro" )
         , TABS.map(t => (
           React.createElement('button', { key: t.id, onClick: () => setTab(t.id), className: tab===t.id?"lg-tab-active":"", style: { borderRadius: 10, padding: "9px 12px", fontSize: 13, fontWeight: tab === t.id ? 600 : 400, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 10, transition: "all .15s ease", color: tab === t.id ? C.blue : "#3C3C43", border: "none", background: "transparent" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3241}}
-            , React.createElement('span', { style: { fontSize: 14, color: tab === t.id ? C.blue : C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3242}}, ICONS[t.id]), t.label
+            , React.createElement(NavIcon, { id: t.id, active: tab === t.id, __self: this, __source: {fileName: _jsxFileName, lineNumber: 3242}}), t.label
           )
         ))
       )
