@@ -13331,6 +13331,20 @@ function shareWhatsApp(ct, cl, ve, emp) {
 }
 
 // -- INICIO ----------------------------------------------------------------─
+// Status efetivo do veículo derivado dos contratos (fonte da verdade)
+function statusEfetivoVeiculo(veiculo, contratos) {
+  var hoje = new Date().toISOString().split("T")[0];
+  // Se está em manutenção ou inativo, respeita o banco
+  if (veiculo.status === "manutencao" || veiculo.status === "inativo") return veiculo.status;
+  // Verifica se há contrato ativo para este veículo
+  var temAtivo = contratos.some(function(c) {
+    return String(c.veiculo_id) === String(veiculo.id)
+      && c.status === "ativo"
+      && c.data_fim >= hoje;
+  });
+  return temAtivo ? "alugado" : "disponivel";
+}
+
 function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, receitas, contas, setTab }) {
   const hoje = new Date().toISOString().split("T")[0];
   const mesAtual = new Date().toISOString().slice(0, 7);
@@ -13339,8 +13353,8 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
   const em3dias = new Date(); em3dias.setDate(em3dias.getDate() + 3); const str3 = em3dias.toISOString().split("T")[0];
   const nomeMes = new Date().toLocaleString("pt-BR", { month: "long", year: "numeric" });
 
-  const disponiveis = veiculos.filter(v => v.status === "disponivel").length;
-  const alugados = veiculos.filter(v => v.status === "alugado").length;
+  const disponiveis = veiculos.filter(v => statusEfetivoVeiculo(v, contratos) === "disponivel").length;
+  const alugados = veiculos.filter(v => statusEfetivoVeiculo(v, contratos) === "alugado").length;
   const emManut = veiculos.filter(v => v.status === "manutencao").length;
   const totalFrota = veiculos.length;
   const taxaOcup = totalFrota > 0 ? Math.round((alugados / totalFrota) * 100) : 0;
@@ -13553,7 +13567,7 @@ function Inicio({ veiculos, clientes, contratos, multas, manutencoes, despesas, 
 }
 
 // -- FROTA ------------------------------------------------------------------
-function Frota({ veiculos, setVeiculos, toast }) {
+function Frota({ veiculos, setVeiculos, contratos, toast }) {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
   const [edit, setEdit] = useState(null);
@@ -13584,7 +13598,7 @@ function Frota({ veiculos, setVeiculos, toast }) {
         React.createElement('div', { key: v.id, className: CARD_CLS, style: Object.assign({},CARD,{ display: "flex", flexDirection: "column", gap: 10 }), __self: this, __source: {fileName: _jsxFileName, lineNumber: 517}}
           , React.createElement('div', { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 518}}
             , React.createElement('div', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 519}}, React.createElement('div', { style: { fontWeight: 600, fontSize: 15 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 519}}, v.marca, " " , v.modelo), React.createElement('div', { style: { fontWeight: 700, fontSize: 18, letterSpacing: 2, color: C.blue }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 519}}, v.placa))
-            , React.createElement('span', { style: Badge(SC[v.status] || C.gray), __self: this, __source: {fileName: _jsxFileName, lineNumber: 520}}, v.status)
+            , React.createElement('span', { style: Badge(SC[statusEfetivoVeiculo(v, contratos)] || C.gray), __self: this, __source: {fileName: _jsxFileName, lineNumber: 520}}, statusEfetivoVeiculo(v, contratos))
           )
           , React.createElement('div', { style: { fontSize: 12, color: C.sub, display: "flex", gap: 12, flexWrap: "wrap" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 522}}
             , v.ano && React.createElement('span', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 523}}, v.ano), v.cor && React.createElement('span', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 523}}, v.cor), v.km && React.createElement('span', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 523}}, Number(v.km).toLocaleString(), " km" )
@@ -14430,9 +14444,9 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
         return React.createElement('div', { key: m.id, style: cardStyle, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1329}}
           , React.createElement('div', { style: { display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1330}}
             , React.createElement('div', { style: { flex: 1 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1331}}
-              , React.createElement('div', { style: { fontWeight: 700, fontSize: 15 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1332}}, m.tipo)
+              , React.createElement('div', { style: { fontWeight: 700, fontSize: 15 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1332}}, m.tipo, m.ait && React.createElement('span', { style: Object.assign({}, Badge(C.orange), { marginLeft: 8, fontWeight: 600 }) }, "AIT " + m.ait))
               , React.createElement('div', { style: { fontSize: 13, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1333}}, "👤 " , cl && cl.nome || "--", " · 🚗 "   , ve && ve.placa || "--")
-              , React.createElement('div', { style: { fontSize: 12, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1334}}, "📅 Infração: "  , fmtDate(m.data), m.local && " · " + m.local)
+              , React.createElement('div', { style: { fontSize: 12, color: C.sub }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1334}}, "📅 Infração: "  , fmtDate(m.data), m.local && " · 📍 " + m.local)
               , m.vencimento && React.createElement('div', { style: { fontSize: 12, color: vencida && !isPago ? C.red : C.sub, fontWeight: vencida && !isPago ? 700 : 400 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1335}}, vencida && !isPago ? "🚨 " : "💳 ", "Vencimento: " , fmtDate(m.vencimento))
               , isPago && m.data_pagamento && React.createElement('div', { style: { fontSize: 12, color: C.green } }, "✅ Pago em: ", fmtDate(m.data_pagamento))
               , m.data_notificacao && React.createElement('div', { style: { fontSize: 12, color: C.teal } }, "📤 Notificado em: ", fmtDate(m.data_notificacao))
@@ -14490,7 +14504,8 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, toast }) {
           , React.createElement(Lbl, { label: "Pontos", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1369}}, React.createElement('input', { style: FI, type: "number", value: form.pontos || "", onChange: e => F("pontos", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1369}} ))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1371}}
-          , React.createElement(Lbl, { label: "Local", flex: 2, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1372}}, React.createElement('input', { style: FI, value: form.local || "", onChange: e => F("local", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1372}} ))
+          , React.createElement(Lbl, { label: "AIT (Auto de Infração)", flex: 1 }, React.createElement('input', { style: FI, value: form.ait || "", onChange: function(e){F("ait",e.target.value);}, placeholder: "Nº do auto" }))
+          , React.createElement(Lbl, { label: "Local", flex: 1 }, React.createElement('input', { style: FI, value: form.local || "", onChange: function(e){F("local",e.target.value);}, placeholder: "Local da infração" }))
           , React.createElement(Lbl, { label: "Status Pgto", flex: 1 }, React.createElement('select', { style: FI, value: form.status || "pendente", onChange: function(e){F("status",e.target.value);} },
               React.createElement('option', { value: "pendente" }, "Pendente"),
               React.createElement('option', { value: "pago" }, "Pago"),
@@ -14741,7 +14756,7 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, despes
 }
 
 // -- ORCAMENTO PESSOAL ------------------------------------------------------
-function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
+function OrcamentoPessoal({ contratos, despesas, receitas, manutencoes, multas, filtroResumoMes: filtroResumoMesProp, toast }) {
   const [itens, setItens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
@@ -14770,10 +14785,38 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
   var itensRecorrentes = itens.filter(it => it.recorrente && it.mes && it.mes < filtroMes && itemVisivelNoMes(it, filtroMes));
   var todosVisiveis = itensProprios.concat(itensRecorrentes);
 
-  // KPIs
-  var recLocMes = contratos.filter(c => c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === filtroMes).reduce((s,c)=>s+parseFloat(c.valor_total||0),0);
-  var despLocMes = despesas.filter(d => (d.data||"").slice(0,7) === filtroMes).reduce((s,d)=>s+parseFloat(d.valor||0),0);
-  var lucroLocadora = Math.max(0, recLocMes - despLocMes);
+  // Pró-labore = Saldo Líquido Previsto da locadora (usa mesmo mês da Conciliação se disponível)
+  var _mesRef = filtroResumoMesProp || filtroMes;
+  var _ctsMes = contratos.filter(function(c) {
+    if (c.status === "cancelado") return false;
+    var ref = c.previsao_pagamento || c.data_fim || "";
+    return ref.slice(0,7) === _mesRef;
+  });
+  var _recAvulsas = receitas.filter(r => (r.data||"").slice(0,7) === _mesRef).reduce((s,r)=>s+parseFloat(r.valor||0),0);
+  var _totalPrevisto = _ctsMes.reduce((s,c)=>s+parseFloat(c.valor_total||0),0) + _recAvulsas;
+  var _despMes = despesas.filter(function(d) {
+    if (d.manutencao_id) return false;
+    var dm = (d.data||"").slice(0,7);
+    if (dm === _mesRef) return true;
+    if (d.recorrente && dm && dm < _mesRef) {
+      if (!d.prazo_recorrencia) return true;
+      var ini = new Date(dm+"-01"), fim2 = new Date(_mesRef+"-01");
+      var diff = (fim2.getFullYear()-ini.getFullYear())*12 + fim2.getMonth()-ini.getMonth();
+      return diff <= parseInt(d.prazo_recorrencia);
+    }
+    return false;
+  }).reduce((s,d)=>s+parseFloat(d.valor||0),0);
+  var _manutMes = (manutencoes||[]).filter(function(m){
+    return (m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7) === _mesRef;
+  }).reduce((s,m)=>s+parseFloat(m.custo||0),0);
+  var _multasMes = (multas||[]).filter(function(m){
+    return (m.data||"").slice(0,7) === _mesRef || (m.vencimento||"").slice(0,7) === _mesRef;
+  }).reduce(function(s,m){
+    var v = parseFloat(m.valor||0);
+    var cobrado = (m.cobrado_cliente==="pago"||m.cobrado_cliente==="pendente") ? parseFloat(m.valor_cobrado||m.valor||0) : 0;
+    return s + Math.max(0, v - cobrado);
+  }, 0);
+  var lucroLocadora = _totalPrevisto - _despMes - _manutMes - _multasMes; // Pró-labore = saldo líquido previsto
   var entradasExtras = todosVisiveis.filter(it => it.tipo === "receita").reduce((s,it)=>s+parseFloat(it.valor||0),0);
   var despPessoais = todosVisiveis.filter(it => it.tipo === "despesa").reduce((s,it)=>s+parseFloat(it.valor||0),0);
   var despPago = todosVisiveis.filter(it => it.tipo === "despesa" && (it.status === "pago" || it.status === "recebido")).reduce((s,it)=>s+parseFloat(it.valor||0),0);
@@ -14899,9 +14942,9 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
       /* KPIs */
       , React.createElement('div', { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1770}}
         , React.createElement('div', { style: { background: "#fff", borderRadius: 16, padding: "14px 16px" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1771}}
-          , React.createElement('div', { style: { fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1772}}, "Locadora")
+          , React.createElement('div', { style: { fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1772}}, "Pró-labore")
           , React.createElement('div', { style: { fontSize: 20, fontWeight: 800, color: C.blue, marginTop: 4 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1773}}, fmtBRL(lucroLocadora))
-          , React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 1 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1774}}, "lucro previsto" )
+          , React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 1 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1774}}, "saldo líq. da locadora" )
         )
         , React.createElement('div', { style: { background: "#fff", borderRadius: 16, padding: "14px 16px" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1776}}
           , React.createElement('div', { style: { fontSize: 10, color: C.sub, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1777}}, "Extras")
@@ -15001,6 +15044,10 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
           var ref = c.previsao_pagamento || c.data_fim || "";
           return ref.slice(0,7) === mes;
         }).reduce(function(s,c) { return s + parseFloat(c.valor_total||0); }, 0);
+        // Receitas avulsas da locadora no mês
+        var recAvulsas = receitas.filter(function(r) {
+          return (r.data||"").slice(0,7) === mes;
+        }).reduce(function(s,r) { return s + parseFloat(r.valor||0); }, 0);
         // Receitas pessoais recorrentes do mês
         var recPessoal = itens.filter(function(it) {
           return it.tipo === "receita" && itemVisivelNoMes(it, mes);
@@ -15009,10 +15056,10 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
         var despPessoalMes = itens.filter(function(it) {
           return it.tipo === "despesa" && itemVisivelNoMes(it, mes);
         }).reduce(function(s,it) { return s + parseFloat(it.valor||0); }, 0);
-        var totalEntradas = recLoc + recPessoal;
+        var totalEntradas = recLoc + recAvulsas + recPessoal;
         var saldoPO = totalEntradas - despPessoalMes;
         var isPastPO = mes < new Date().toISOString().slice(0,7);
-        return { mes, recLoc, recPessoal, despPessoalMes, totalEntradas, saldoPO, isPastPO };
+        return { mes, recLoc, recAvulsas, recPessoal, despPessoalMes, totalEntradas, saldoPO, isPastPO };
       });
       var maxPO = Math.max.apply(null, projPessoal.map(function(p){return p.totalEntradas;}).concat([1]));
       var totalEntradas6 = projPessoal.reduce(function(s,p){return s+p.totalEntradas;},0);
@@ -15047,7 +15094,8 @@ function OrcamentoPessoal({ contratos, despesas, receitas, toast }) {
                 , React.createElement('div', { style: { height:10, borderRadius:6, background:p.isPastPO?C.gray:C.purple, width:pctPO+"%", transition:"width .3s" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1917}} )
               )
               , React.createElement('div', { style: { display:"flex", gap:12, fontSize:11, color:C.sub, flexWrap:"wrap" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1919}}
-                , p.recLoc > 0 && React.createElement('span', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 1920}}, "🚗 Locadora · "   , fmtBRL(p.recLoc))
+                , p.recLoc > 0 && React.createElement('span', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 1920}}, "🚗 Contratos · "   , fmtBRL(p.recLoc))
+                , p.recAvulsas > 0 && React.createElement('span', { style: { color:C.teal }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1920}}, "+ Avulsas · "   , fmtBRL(p.recAvulsas))
                 , p.recPessoal > 0 && React.createElement('span', { style: { color:C.green }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1921}}, "+ Extras · "   , fmtBRL(p.recPessoal))
                 , p.despPessoalMes > 0 && React.createElement('span', { style: { color:C.red }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1922}}, "↓ Desp. · "   , fmtBRL(p.despPessoalMes), " · Saldo "   , fmtBRL(p.saldoPO))
               )
@@ -15505,7 +15553,12 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
     , tab === "conciliacao" && (() => {
       var mesConc = filtroResumoMes;
       var anoConc = mesConc.slice(0,4); var mmConc = mesConc.slice(5,7);
-      var ctsMesConc = contratos.filter(function(c) { return c.previsao_pagamento && c.previsao_pagamento.slice(0,7) === mesConc; });
+      // Mesma lógica do Orçamento Pessoal: usa previsao_pagamento com fallback para data_fim, exclui cancelados
+      var ctsMesConc = contratos.filter(function(c) {
+        if (c.status === "cancelado") return false;
+        var ref = c.previsao_pagamento || c.data_fim || "";
+        return ref.slice(0,7) === mesConc;
+      });
       var recAvMesConc = receitas.filter(function(r) { return (r.data||"").slice(0,7) === mesConc; });
       var despMesConc = despesas.filter(function(d) {
         if (d.manutencao_id) return false;
@@ -15526,12 +15579,13 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       var totalDespPrevista = despMesConc.reduce(function(s,d){return s+parseFloat(d.valor||0);},0);
       var totalDespPaga = despMesConc.filter(function(d){return d.status==="pago";}).reduce(function(s,d){return s+parseFloat(d.valor||0);},0);
 
-      // Manutenção do mês
+      // Manutenção do mês — usa custo, status_financeiro, mesma lógica do fluxo
       var manutMesConc = (manutencoes||[]).filter(function(m){
-        return (m.data_entrada||"").slice(0,7) === mesConc || (m.data_previsao_pagamento||"").slice(0,7) === mesConc;
+        var ref = (m.data_previsao_pagamento||m.data_pagamento||m.data_entrada||"").slice(0,7);
+        return ref === mesConc;
       });
-      var totalManutPrevista = manutMesConc.reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
-      var totalManutPaga = manutMesConc.filter(function(m){return m.status==="concluido"||m.status==="pago";}).reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
+      var totalManutPrevista = manutMesConc.reduce(function(s,m){return s+parseFloat(m.custo||0);},0);
+      var totalManutPaga = manutMesConc.filter(function(m){return m.status_financeiro==="pago";}).reduce(function(s,m){return s+parseFloat(m.custo||0);},0);
 
       // Multas do mês
       var multasMesConc = (multas||[]).filter(function(m){
@@ -15540,7 +15594,19 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       var totalMultasVenc = multasMesConc.reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
       var totalMultasPagas = multasMesConc.filter(function(m){return m.status==="pago";}).reduce(function(s,m){return s+parseFloat(m.valor||0);},0);
 
+      // Custo líquido das multas para a locadora = valor da multa menos o que já foi / será cobrado do cliente
+      var totalMultasCustoLiquido = multasMesConc.reduce(function(s,m){
+        var vMulta = parseFloat(m.valor||0);
+        // Se cobrado_cliente === "pago": cliente já pagou o valor cobrado, desconta
+        // Se cobrado_cliente === "pendente": ainda vai cobrar, considera como receita prevista (desconta)
+        // Se não cobrado (nao / vazio): locadora arca com tudo
+        var vCobrado = (m.cobrado_cliente === "pago" || m.cobrado_cliente === "pendente") ? parseFloat(m.valor_cobrado||m.valor||0) : 0;
+        return s + Math.max(0, vMulta - vCobrado);
+      }, 0);
+
       var saldoConf = totalConfirmado - totalDespPaga - totalManutPaga - totalMultasPagas;
+      // Saldo previsto: receitas totais previstas menos todas as saídas previstas (multas pelo custo líquido da locadora)
+      var saldoPrevisto = totalPrevisto - totalDespPrevista - totalManutPrevista - totalMultasCustoLiquido;
       var anos = ["2024","2025","2026","2027"]; var mms = ["01","02","03","04","05","06","07","08","09","10","11","12"];
       var nomesMes = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
       return React.createElement('div', { style: { display:"flex", flexDirection:"column", gap:12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2377}}
@@ -15582,13 +15648,20 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
               { label:"✅ Manutenção Paga",     val:totalManutPaga,    cor:"#5856D6", sub:pendManut>0?"falta "+fmtBRL(pendManut):"todas pagas" }
             ]),
             Row([
-              { label:"⚠️ Multas do Mês",       val:totalMultasVenc,   cor:C.red,     sub:multasMesConc.length+" multa(s)" },
+              { label:"⚠️ Multas do Mês",       val:totalMultasVenc,   cor:C.red,     sub:"custo líquido: "+fmtBRL(totalMultasCustoLiquido) },
               { label:"✅ Multas Pagas",         val:totalMultasPagas,  cor:C.green,   sub:pendMultas>0?"falta "+fmtBRL(pendMultas):"todas pagas" }
             ]),
-            React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{background: saldoConf>=0?"linear-gradient(135deg,rgba(52,199,89,0.12),rgba(52,199,89,0.04))":"linear-gradient(135deg,rgba(255,59,48,0.12),rgba(255,59,48,0.04))", border:"1.5px solid "+(saldoConf>=0?C.green:C.red)+"44"}) },
-              React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4, letterSpacing:0.5 } }, "💰 Saldo Líquido"),
-              React.createElement('div', { style: { fontSize:26, fontWeight:900, color:saldoConf>=0?C.green:C.red, letterSpacing:-0.5 } }, fmtBRL(saldoConf)),
-              React.createElement('div', { style: { fontSize:10, color:C.sub, marginTop:3 } }, "receita confirmada − saídas pagas")
+            React.createElement('div', { style: { display:"flex", gap:10 } },
+              React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{flex:1, background: saldoConf>=0?"linear-gradient(135deg,rgba(52,199,89,0.12),rgba(52,199,89,0.04))":"linear-gradient(135deg,rgba(255,59,48,0.12),rgba(255,59,48,0.04))", border:"1.5px solid "+(saldoConf>=0?C.green:C.red)+"44"}) },
+                React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4, letterSpacing:0.5 } }, "💰 Saldo Líquido"),
+                React.createElement('div', { style: { fontSize:22, fontWeight:900, color:saldoConf>=0?C.green:C.red, letterSpacing:-0.5 } }, fmtBRL(saldoConf)),
+                React.createElement('div', { style: { fontSize:10, color:C.sub, marginTop:3 } }, "confirmado − saídas pagas")
+              ),
+              React.createElement('div', { className: CARD_CLS, style: Object.assign({},CARD,{flex:1, background: saldoPrevisto>=0?"linear-gradient(135deg,rgba(0,122,255,0.10),rgba(0,122,255,0.03))":"linear-gradient(135deg,rgba(255,59,48,0.10),rgba(255,59,48,0.03))", border:"1.5px solid "+(saldoPrevisto>=0?C.blue:C.red)+"44"}) },
+                React.createElement('div', { style: { fontSize:10, color:C.sub, textTransform:"uppercase", fontWeight:700, marginBottom:4, letterSpacing:0.5 } }, "📊 Saldo Previsto"),
+                React.createElement('div', { style: { fontSize:22, fontWeight:900, color:saldoPrevisto>=0?C.blue:C.red, letterSpacing:-0.5 } }, fmtBRL(saldoPrevisto)),
+                React.createElement('div', { style: { fontSize:10, color:C.sub, marginTop:3 } }, "receitas previstas − desp. − manut. − multas líq.")
+              )
             )
           );
         })()
@@ -15653,15 +15726,15 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           manutMesConc.length === 0 && React.createElement('div', { style: { color:C.sub, fontSize:13, textAlign:"center", padding:12 } }, "Nenhuma manutenção neste mês"),
           manutMesConc.map(function(m,i) {
             var ve = (veiculos||[]).find(function(v){return v.id==m.veiculo_id;})||{};
-            var pago = m.status === "concluido" || m.status === "pago";
-            var dataRef = m.data_entrada || m.data_previsao_pagamento;
+            var pago = m.status_financeiro === "pago";
+            var dataRef = m.data_previsao_pagamento || m.data_pagamento || m.data_entrada;
             return React.createElement('div', { key: m.id, style: { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom: i<manutMesConc.length-1?"1px solid "+C.border:"none", gap:8 } },
               React.createElement('div', { style: { flex:1 } },
                 React.createElement('div', { style: { fontSize:13, fontWeight:600 } }, m.tipo||"--"),
                 React.createElement('div', { style: { fontSize:11, color:C.sub } }, (ve.placa||"--") + " " + (ve.modelo||"") + (dataRef ? " · " + fmtDate(dataRef) : ""))
               ),
               React.createElement('div', { style: { textAlign:"right" } },
-                React.createElement('div', { style: { fontWeight:700, color:"#AF52DE" } }, fmtBRL(m.valor)),
+                React.createElement('div', { style: { fontWeight:700, color:"#AF52DE" } }, fmtBRL(m.custo)),
                 React.createElement('span', { style: Badge(pago ? C.green : C.orange) }, pago ? "✅ paga" : "⏳ prevista")
               )
             );
@@ -15762,7 +15835,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       );
     })()
 
-    , tab === "pessoal" && React.createElement(OrcamentoPessoal, { contratos: contratos, despesas: despesas, receitas: receitas, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2512}} )
+    , tab === "pessoal" && React.createElement(OrcamentoPessoal, { contratos: contratos, despesas: despesas, receitas: receitas, manutencoes: manutencoes, multas: multas, filtroResumoMes: filtroResumoMes, toast: toast, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2512}} )
 
     , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : (edit ? "Editar Receita" : "Nova Receita"), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2514}}
       , React.createElement('div', { style: { display: "flex", flexDirection: "column", gap: 12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2515}}
@@ -15836,7 +15909,7 @@ function Relatorios({ contratos, veiculos, clientes, multas, manutencoes, despes
   var custoMan = manutencoes.reduce((s, m) => s + parseFloat(m.custo || 0), 0);
   var totalDesp = despesas.reduce((s, d) => s + parseFloat(d.valor || 0), 0);
   var lucro = receita - totalDesp - custoMan;
-  var porStatus = ["disponivel", "alugado", "manutencao", "inativo"].map(st => ({ label: st, count: veiculos.filter(v => v.status === st).length }));
+  var porStatus = ["disponivel", "alugado", "manutencao", "inativo"].map(st => ({ label: st, count: veiculos.filter(v => statusEfetivoVeiculo(v, contratos) === st).length }));
 
   var faturasFil = contratos.filter(c => {
     if (c.status !== "concluido") return false;
@@ -16279,6 +16352,10 @@ function Config({ empresa, setEmpresa, toast }) {
                    , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists valor_cobrado numeric;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists status_notificacao text default 'nao_notificado';"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists data_notificacao date;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists ait text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists local text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists ait text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists local text;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3016}}), "alter table veiculos add column if not exists venc_ipva date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3017}}), "alter table veiculos add column if not exists venc_seguro date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3018}}), "alter table veiculos add column if not exists venc_licenciamento date;"
@@ -16304,6 +16381,10 @@ function Config({ empresa, setEmpresa, toast }) {
                    , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3038}}), "alter table multas add column if not exists valor_cobrado numeric;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists status_notificacao text default 'nao_notificado';"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3015}}), "alter table multas add column if not exists data_notificacao date;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists ait text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists local text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists ait text;"
+                 , React.createElement('br', {}), "alter table multas add column if not exists local text;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3039}}), "alter table veiculos add column if not exists venc_ipva date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3040}}), "alter table veiculos add column if not exists venc_seguro date;"
                  , React.createElement('br', {__self: this, __source: {fileName: _jsxFileName, lineNumber: 3041}}), "alter table veiculos add column if not exists venc_licenciamento date;"
@@ -16365,12 +16446,13 @@ function SearchBar({ clientes, contratos, multas, veiculos, setTab, desktop }) {
              (cl&&(cl.nome||"").toLowerCase().includes(q)) ||
              (c.descricao||"").toLowerCase().includes(q) ||
              (c.tipo||"").toLowerCase().includes(q) ||
+             (c.ait||"").toLowerCase().includes(q) ||
              String(c.id).includes(q) ||
              ("00000"+String(c.id)).slice(-5).includes(q);
     }).slice(0,4).forEach(function(c) {
       var cl = (clientes||[]).find(function(x) { return x.id == c.cliente_id; });
       var ve = (veiculos||[]).find(function(x) { return x.id == c.veiculo_id; });
-      var aitNum = "AIT #"+("00000"+String(c.id)).slice(-5);
+      var aitNum = c.ait ? "AIT "+c.ait : "#"+("00000"+String(c.id)).slice(-5);
       results.push({ tipo: "Multa", icon: "\u26A0\uFE0F", label: aitNum+" · "+(ve&&ve.placa||"—"), sub: (cl&&cl.nome||"—")+" · "+(c.tipo||c.descricao||""), action: function() { setTab("multas"); } });
     });
     (veiculos || []).filter(function(c) {
@@ -16545,7 +16627,7 @@ function Calendario({ contratos, multas, veiculos, clientes, contas, despesas, r
       cor: m.vencimento < hoje ? "#FF3B30" : "#FF9500",
       emoji: "⚠️",
       titulo: "Multa " + (m.tipo||"") + " · " + (ve&&ve.placa||"--") + " · " + fmtV(m.valor),
-      sub: (cl&&cl.nome||"--") + (m.descricao ? " · " + m.descricao : "") + " · AIT #" + ("00000"+m.id).slice(-5),
+      sub: (cl&&cl.nome||"--") + (m.descricao ? " · " + m.descricao : "") + (m.ait ? " · AIT " + m.ait : "") + " · #" + ("00000"+m.id).slice(-5),
       tab: "multas"
     });
   });
