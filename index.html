@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="e46c55b"/>
+<meta name="ag-build" content="814bf03"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -29579,6 +29579,15 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
       );
     })()
 
+    /* ══ Bloco com respiro 50% maior (pedido do usuário): de Boletos em
+       diante — inclui todos os painéis relacionados que vêm depois (grid
+       Multas/Despesas/Renovações/Recebimentos/Manutenções, Despesas por
+       Categoria + Receitas por Cliente, Gráficos e RentabilidadeWidget).
+       O vão-base normal (RX.dashGap) continua valendo ACIMA deste bloco —
+       só o espaço a partir de Boletos (Multas pendentes é o primeiro painel
+       do próximo item) cresce. */
+    , React.createElement('div', { style: { display:'flex', flexDirection:'column', gap: RX.dashGap*1.5 } }
+
     /* ══ Boletos do mês (a emitir × emitidos) ══
        Cobertura: contratos (faturas) + receitas avulsas (!ref_fatura) — regra de cobertura de
        dados do CLAUDE.md exige que toda receita avulsa alimente também estes painéis. */
@@ -31138,6 +31147,7 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
         receitas:receitas, manutencoes:manutencoes, multas:multas,
         clientes:clientes, empresa:empresa, toast:toast
       })
+      ) /* fecha o bloco com respiro 50% maior (Boletos em diante) */
         )
   );
 }
