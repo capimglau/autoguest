@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="66e9749"/>
+<meta name="ag-build" content="1913128"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -30594,7 +30594,7 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
       function _painelFunil(opts){
         return React.createElement('div', { style:{ flex:1, minWidth:0, display:"flex", flexDirection:"column" } }
           , React.createElement('div', { onClick:opts.onTitleClick, style:{ fontSize:12, fontWeight:700, color:C.sub, marginBottom:8, cursor:opts.onTitleClick?"pointer":"default", display:"flex", alignItems:"center", gap:4 } }
-            , opts.icon+" "+opts.title
+            , opts.title
             , opts.onTitleClick && React.createElement('span', { style:{ fontSize:11, opacity:0.55 } }, "→")
           )
           , React.createElement('div', { style:{ background:C.card, borderRadius:18, border:"1px solid "+C.border, padding:"14px 16px 16px", flex:1 } }
