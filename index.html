@@ -29411,7 +29411,11 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
       var _lastPtP = _ptsTrendP[_ptsTrendP.length-1];
       var _glowColorP = _valsTrendP[_valsTrendP.length-1] < 0 ? C.red : C.green;
 
-      return React.createElement('div', { className:"ag-kpi-card", style:Object.assign({},_cardBase,{cursor:'pointer',padding:0,overflow:'hidden',position:'relative'}), onClick:function(){ setSaldoHojeTick(function(v){ return v+1; }); _setSaldoPontoSel(null); } }
+      /* marginTop negativo (pedido do usuário: subir este card 15% mais
+         perto da Agenda logo acima) — quebra de propósito, só aqui, a
+         regra de "mesmo gap entre todos os painéis": -15% de RX.dashGap
+         (21px mobile / 31px desktop), arredondado. */
+      return React.createElement('div', { className:"ag-kpi-card", style:Object.assign({},_cardBase,{cursor:'pointer',padding:0,overflow:'hidden',position:'relative',marginTop:-Math.round(RX.dashGap*0.15)}), onClick:function(){ setSaldoHojeTick(function(v){ return v+1; }); _setSaldoPontoSel(null); } }
         , React.createElement('div', { style:{ display:'flex' } }
           , React.createElement('div', { style:Object.assign({},_cardBase,{flex:1,borderRight:'1px solid var(--c-border)',position:'relative'}) }
             , saldoHojeFace===0
