@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="47d8554"/>
+<meta name="ag-build" content="686bfa2"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -88,6 +88,14 @@
 body, body *{ font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif !important; }
 /* APP-FONT-IBM-PLEX-END */
 *{box-sizing:border-box;margin:0;padding:0;outline:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;}
+/* Bug conhecido do Safari/WebKit (iOS): input[type=date] e type=time têm um
+   "-webkit-min-logical-width" interno que ignora o width:100% do CSS dentro
+   de flexbox — o campo vaza pra fora do container em vez de encolher junto
+   com os outros campos da mesma linha/coluna. É só no iOS: em outros
+   navegadores essa propriedade não existe e a regra não faz nada.
+   Sem isso, todo campo de Retirada/Devolução/Hora (contrato, multa,
+   manutenção etc.) passa da borda dos campos de texto ao lado. */
+input[type="date"], input[type="time"]{-webkit-min-logical-width:0%;}
 /* Scroll do DOCUMENTO (ver .ag-app-shell): no mobile quem rola é o próprio
    <html>, e não um container interno com position:fixed — é isso que permite
    ao Safari do iOS minimizar a barra de busca ao rolar a página.
