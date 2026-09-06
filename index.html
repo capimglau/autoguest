@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="814bf03"/>
+<meta name="ag-build" content="14ada98"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -29590,7 +29590,12 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
 
     /* ══ Boletos do mês (a emitir × emitidos) ══
        Cobertura: contratos (faturas) + receitas avulsas (!ref_fatura) — regra de cobertura de
-       dados do CLAUDE.md exige que toda receita avulsa alimente também estes painéis. */
+       dados do CLAUDE.md exige que toda receita avulsa alimente também estes painéis.
+       Espaço ACIMA e ABAIXO deste painel continua no vão-base normal
+       (RX.dashGap) — só o espaço INTERNO entre os painéis ligados a ele
+       (grid de Multas/Despesas/Renovações/Recebimentos/Manutenções e
+       demais relacionados abaixo) cresce 50% (ver bloco logo depois do
+       fechamento desta IIFE). */
     , (() => {
       /* reaproveita ctsMes (contratos do mês corrente do dashboard, já tratando pago via data_pagamento) —
          "boleto" aqui é o mesmo documento já controlado por faturaContratoEmitida/numero_fatura/data_emissao,
@@ -29814,6 +29819,15 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
           )
       );
     })()
+
+    /* ══ Bloco com respiro 50% maior (pedido do usuário): grid de Multas
+       pendentes/Despesas pendentes/Renovações/Recebimentos/Manutenções em
+       diante até o fim dos painéis financeiros do Início — inclui também
+       Despesas por Categoria + Receitas por Cliente, Gráficos e o
+       RentabilidadeWidget. O espaço ACIMA (Boletos → Multas pendentes)
+       continua no vão-base normal (RX.dashGap) — só o espaço INTERNO entre
+       estes painéis relacionados cresce. */
+    , React.createElement('div', { style: { display:'flex', flexDirection:'column', gap: RX.dashGap*1.5 } }
 
     /* ── PAINÉIS: Renovações Próximas + Baixas de Despesas ── */
     , (() => {
@@ -30411,18 +30425,17 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
          continua aparecendo com a mensagem de sempre (_empty). */
       var _mostraPan = function(qtd){ return desktop || qtd > 0; };
 
-      // Espaçamento vertical igualado a 21px (mesmo valor usado em toda a
-      // coluna do Dashboard, ex.: Saldo→Despesas) — pedido do usuário: todos
-      // os painéis com a mesma distância entre si, incluindo os desta grade
-      // (Multas/Despesas/Renovações/Recebimentos/Manutenções).
-      // columnGap 24 (era 16, +50%): pedido do usuário — só o espaço
-      // HORIZONTAL entre os cartões desta grade (Despesas ao lado de
-      // Renovações, Recebimentos ao lado de Manutenções) ficou 50% maior; o
-      // rowGap (vertical, entre fileiras) continua em 21px, sem mudança.
+      // rowGap 31.5 (era 21px, +50%, pedido do usuário: mais respiro ENTRE
+      // os painéis ligados desta grade — Multas/Despesas/Renovações/
+      // Recebimentos/Manutenções). columnGap 24 (era 16, +50% num pedido
+      // anterior) não muda de novo aqui: só o espaço HORIZONTAL entre os
+      // cartões lado a lado (Despesas ao lado de Renovações, Recebimentos
+      // ao lado de Manutenções) já tinha crescido; agora é o rowGap
+      // (vertical, entre fileiras) que cresce também.
       return React.createElement(React.Fragment, null
       , React.createElement('div', { style:Object.assign({ display:'grid' },
-          desktop ? { marginTop:0, columnGap:24, rowGap:21, gridTemplateColumns:'1fr 1fr' }
-                  : { marginTop:0, gap:21, gridTemplateColumns:'1fr' }) }
+          desktop ? { marginTop:0, columnGap:24, rowGap:31.5, gridTemplateColumns:'1fr 1fr' }
+                  : { marginTop:0, gap:31.5, gridTemplateColumns:'1fr' }) }
 
         /* ── MULTAS PENDENTES ── */
         // Grid de 2 colunas com 5 painéis: Multas abre sozinha ocupando as
