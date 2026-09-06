@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="209acf7"/>
+<meta name="ag-build" content="e46c55b"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -29842,12 +29842,6 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
       var _despTodasMesBar = resolverDespesasDoMes((despesas||[]).filter(function(d){ return !isRetLucro(d); }), dashMes);
       var _despTotalBar  = _despTodasMesBar.reduce(function(s,d){ return s+parseFloat(d.valor||0); }, 0);
       var _despPagoBar   = _despTodasMesBar.filter(function(d){ return d.status==='pago' || !!d.data_pagamento; }).reduce(function(s,d){ return s+parseFloat(d.valor||0); }, 0);
-      /* Regra de contrato parcial (CLAUDE.md): previsto=valor_total,
-         recebido=valor_pago, a receber=valor_total−valor_pago — nunca medir
-         pelo valor_pago sozinho nem sobrescrever o previsto com ele. */
-      var _ctsRecebidoBar = ctsMes.filter(function(c){ return c.status_pagamento==='pago'; }).reduce(function(s,c){ return s+parseFloat(c.valor_total||0); }, 0)
-        + ctsMes.filter(function(c){ return c.status_pagamento==='parcial' && c.valor_pago; }).reduce(function(s,c){ return s+parseFloat(c.valor_pago||0); }, 0);
-      var _ctsPrevistoBar = ctsMes.reduce(function(s,c){ return s+parseFloat(c.valor_total||0); }, 0);
 
       var _barModalState = React.useState(null); var _barModal = _barModalState[0]; var setBarModal = _barModalState[1];
 
@@ -30486,7 +30480,6 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
         /* ── RECEBIMENTOS DE LOCAÇÃO ── */
         , _mostraPan(_recList.length) && React.createElement('div', { style:_panBase }
           , _panHdr('Recebimentos de locação', _recList.length, C.green)
-          , _ctsPrevistoBar>0 && _barRow({ pago:_ctsRecebidoBar, total:_ctsPrevistoBar, corPago:C.green, corTrilha:C.green, labelPago:'Recebido', labelRestante:'A receber', onClick:function(){ setBarModal('recebimentos'); } })
           , React.createElement('div', { style:_panBody }
             , _recList.length===0
               ? null
@@ -30510,49 +30503,29 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
           )
         )
       )
-      /* ── Detalhamento da barra (Despesas/Recebimentos) — Modal genérico,
-         mesmo padrão dos outros diálogos do app. */
+      /* ── Detalhamento da barra de Despesas — Modal genérico, mesmo padrão
+         dos outros diálogos do app. (A barra equivalente de Recebimentos de
+         locação foi removida do painel a pedido do usuário — este modal já
+         não é mais aberto a partir dela.) */
       , _barModal && React.createElement(Modal, {
           open:true, onClose:function(){ setBarModal(null); },
-          title: _barModal==='despesas' ? ('Despesas de '+nomeMes) : ('Recebimentos de '+nomeMes)
+          title: 'Despesas de '+nomeMes
         }
-        , _barModal==='despesas'
-          ? (_despTodasMesBar.length===0
-              ? _empty('Nenhuma despesa em '+nomeMes)
-              : _despTodasMesBar.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }).map(function(d){
-                  var pago = d.status==='pago' || !!d.data_pagamento;
-                  return React.createElement('div', {
-                      key:d.id, onClick:function(){ onItemNav({type:'despesa',id:d.id,mes:dashMes}); setBarModal(null); },
-                      style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid '+C.border, cursor:'pointer' }
-                    }
-                    , React.createElement('div', null
-                      , React.createElement('div', { style:{ fontSize:14, fontWeight:600 } }, (pago?'✅ ':'⏳ ')+(d.descricao||'Despesa'))
-                      , React.createElement('div', { style:{ fontSize:12, color:C.sub } }, d.categoria||'')
-                    )
-                    , React.createElement(BRLValue, { v:d.valor, size:14, weight:700, color:pago?C.green:C.red })
-                  );
-                }))
-          : (ctsMes.length===0
-              ? _empty('Nenhum contrato em '+nomeMes)
-              : ctsMes.slice().sort(function(a,b){ return (a.previsao_pagamento||'').localeCompare(b.previsao_pagamento||''); }).map(function(c){
-                  var cl = (clientes||[]).find(function(x){ return x.id==c.cliente_id; });
-                  var ve = (veiculos||[]).find(function(x){ return x.id==c.veiculo_id; });
-                  var isPago = c.status_pagamento==='pago';
-                  var isParcial = c.status_pagamento==='parcial';
-                  return React.createElement('div', {
-                      key:c.id, onClick:function(){ onItemNav({type:'contrato',id:c.id},'contratos'); setBarModal(null); },
-                      style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid '+C.border, cursor:'pointer' }
-                    }
-                    , React.createElement('div', null
-                      , React.createElement('div', { style:{ fontSize:14, fontWeight:600 } }, (isPago?'✅ ':isParcial?'⧆ ':'⏳ ')+((cl&&cl.nome)||'--'))
-                      , React.createElement('div', { style:{ fontSize:12, color:C.sub } }, (ve&&ve.placa)||'')
-                    )
-                    , React.createElement('div', null
-                      , React.createElement('div', { style:{ textAlign:'right' } }, React.createElement(BRLValue, { v:c.valor_total, size:14, weight:700, color:isPago?C.green:isParcial?C.orange:C.red }))
-                      , isParcial && React.createElement('div', { style:{ fontSize:11, color:C.sub, textAlign:'right' } }, 'recebido: ', React.createElement(BRLValue, { v:c.valor_pago||0, size:11, weight:400, color:C.sub }))
-                    )
-                  );
-                }))
+        , _despTodasMesBar.length===0
+            ? _empty('Nenhuma despesa em '+nomeMes)
+            : _despTodasMesBar.slice().sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }).map(function(d){
+                var pago = d.status==='pago' || !!d.data_pagamento;
+                return React.createElement('div', {
+                    key:d.id, onClick:function(){ onItemNav({type:'despesa',id:d.id,mes:dashMes}); setBarModal(null); },
+                    style:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid '+C.border, cursor:'pointer' }
+                  }
+                  , React.createElement('div', null
+                    , React.createElement('div', { style:{ fontSize:14, fontWeight:600 } }, (pago?'✅ ':'⏳ ')+(d.descricao||'Despesa'))
+                    , React.createElement('div', { style:{ fontSize:12, color:C.sub } }, d.categoria||'')
+                  )
+                  , React.createElement(BRLValue, { v:d.valor, size:14, weight:700, color:pago?C.green:C.red })
+                );
+              })
       )
       );
     })()
