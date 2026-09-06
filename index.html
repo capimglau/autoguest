@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="a28889d"/>
+<meta name="ag-build" content="0e3b9de"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -575,6 +575,33 @@ body.pearl .lg-banner-panel{background:linear-gradient(165deg,#eef2f9 0%,#ffffff
    tela — sobrescreve o slide-up de baixo que .lg-modal usa por padrão no
    mobile, que é o certo só pros sheets ancorados na base (AgConfirmModal). */
 .lg-modal.lg-modal-window{animation:ag-window-pop 0.4s cubic-bezier(0.22,1,0.36,1) both;}
+/* Formulário grande (editar contrato/multa/cadastro) em tela cheia no
+   celular — padrão iOS (Contatos, Calendário): nav bar fixa no topo,
+   sem cantos arredondados, ocupando 100% da tela. Some com o respiro do
+   overlay ao redor (senão a janela de 100vw ficaria descentralizada
+   dentro do padding que sobrou). `!important` porque a largura/altura da
+   janela vêm de style inline (ver Modal() em React). */
+@media(max-width:767px){
+  .lg-modal-overlay-full{padding:0!important;}
+  .lg-modal.lg-modal-mobile-full{
+    width:100vw!important;max-width:100vw!important;
+    height:100dvh!important;max-height:100dvh!important;
+    border-radius:0!important;
+  }
+  /* Campo de formulário (Lbl) sempre ocupa a linha inteira — e a linha que
+     o contém (várias vêm em pares "lado a lado" via display:flex) precisa
+     poder quebrar, senão o par continua espremido numa linha só. :has()
+     evita ter que caçar e marcar cada container de linha um por um.
+     min-width:0 (não 100%!) — clássica pegadinha do flexbox: um item com
+     min-width:100% infla o CONTAINER pai (que também é item de outro flex
+     column, ".bd"), e o resultado é o formulário inteiro "vazando" pra uma
+     segunda coluna fora da tela em vez de empilhar. E o :has() só pode
+     pegar linha com PAR de campos (`.ag-field ~ .ag-field`) — sem o `~`
+     ele também bate no `.bd` (que tem um `.ag-field` direto, o 1º campo
+     solto da seção), e um column flex virando wrap é o mesmo vazamento. */
+  .lg-modal-mobile-full .ag-field{flex:1 1 100%!important;min-width:0!important;}
+  .lg-modal-mobile-full div:has(>.ag-field ~ .ag-field){flex-wrap:wrap!important;row-gap:12px;}
+}
 
 /* Page enter */
 .ag-page-enter{animation:ag-tab-switch 0.28s cubic-bezier(0.22,1,0.36,1) both}
@@ -24258,8 +24285,11 @@ function SwipeRow({ children, onEdit, editLabel, onDelete, onBaixar, baixarLabel
 }
 
 function Lbl({ label, children, flex, labelColor }) {
-  /* Label sempre acima do campo — garante visibilidade em todos os temas */
-  return React.createElement('div', { style: { flex: flex, minWidth: 0 } },
+  /* Label sempre acima do campo — garante visibilidade em todos os temas.
+     className "ag-field" é o gancho que o CSS mobile (.lg-modal-mobile-full)
+     usa pra empilhar os campos em tela cheia, um por linha, no padrão iOS —
+     ver comentário perto de .lg-modal-mobile-full no <style>. */
+  return React.createElement('div', { className: "ag-field", style: { flex: flex, minWidth: 0 } },
     React.createElement('div', { style: labelColor ? { fontSize: 13, fontWeight: 700, color: labelColor, marginBottom: 5 } : { fontSize: 13, fontWeight: 600, color: "var(--c-text)", opacity: 0.6, marginBottom: 5 } }, label),
     children
   );
@@ -24314,10 +24344,18 @@ function Modal({ open, onClose, title, children, wide, full }) {
 
   if (!open) return null;
 
+  // No mobile, formulário grande (wide/full) vira sheet de tela cheia, no
+  // padrão iOS (Contatos/Calendário: nav bar fixa no topo, campos empilhados
+  // ocupando a largura toda) — sem isso ficava uma janela flutuante de
+  // 90vw com linhas de campos lado a lado que não tinham espaço pra
+  // encolher e saíam apertadas/sobrepostas. Diálogo simples (nem wide nem
+  // full, ex.: confirmação de cancelamento) continua pequeno e centralizado.
+  var mobileFull = wide || full;
   var overlay = React.createElement('div', {
     onMouseDown: function(e){ overlayPressRef.current = (e.target === e.currentTarget); },
     onTouchStart: function(e){ overlayPressRef.current = (e.target === e.currentTarget); },
     onClick: function(e){ if (overlayPressRef.current && e.target === e.currentTarget) onClose(); },
+    className: "lg-modal-overlay" + (mobileFull ? " lg-modal-overlay-full" : ""),
     style: {
       position: "fixed", inset: 0,
       background: "rgba(0,0,0,0.52)",
@@ -24332,7 +24370,7 @@ function Modal({ open, onClose, title, children, wide, full }) {
   },
     React.createElement('div', {
       onClick: function(e){ e.stopPropagation(); },
-      className: "lg-modal lg-modal-window",
+      className: "lg-modal lg-modal-window" + (mobileFull ? " lg-modal-mobile-full" : ""),
       style: {
         position: "relative",
         borderRadius: 20,
@@ -32477,7 +32515,7 @@ function Frota({ veiculos, setVeiculos, contratos, clientes, toast }) {
           );
         })()
     )
-    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: edit ? "Editar Veiculo" : "Novo Veiculo", __self: this, __source: {fileName: _jsxFileName, lineNumber: 549}}
+    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: edit ? "Editar Veiculo" : "Novo Veiculo", wide: true, __self: this, __source: {fileName: _jsxFileName, lineNumber: 549}}
       , React.createElement('div', { style: { display: "flex", flexDirection: "column", gap: 12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 550}}
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 551}}
           , React.createElement(Lbl, { label: "Placa *" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 552}}, React.createElement('input', { style: FI, value: form.placa || "", onChange: e => F("placa", e.target.value.toUpperCase()), __self: this, __source: {fileName: _jsxFileName, lineNumber: 552}} ))
@@ -32990,7 +33028,7 @@ function Clientes({ clientes, setClientes, contratos, toast }) {
         )
       )
     )
-    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: edit ? "Editar Cliente" : "Novo Cliente", __self: this, __source: {fileName: _jsxFileName, lineNumber: 659}}
+    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: edit ? "Editar Cliente" : "Novo Cliente", wide: true, __self: this, __source: {fileName: _jsxFileName, lineNumber: 659}}
       , React.createElement('div', { style: { display: "flex", flexDirection: "column", gap: 12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 660}}
         , React.createElement(Lbl, { label: "Tipo de Pessoa" }
           , React.createElement('div', { style: { display: "flex", gap: 8 } }
@@ -44085,7 +44123,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
       })
 
 
-    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : (edit ? "Editar Receita" : "Nova Receita"), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2514}}
+    , React.createElement(Modal, { open: modal, onClose: () => setModal(false), title: modalTipo === "despesa" ? (edit ? "Editar Despesa" : "Nova Despesa") : (edit ? "Editar Receita" : "Nova Receita"), wide: true, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2514}}
       , React.createElement('div', { style: { display: "flex", flexDirection: "column", gap: 12 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2515}}
         , modalTipo === "despesa" && React.createElement(React.Fragment, null
           , React.createElement(Lbl, { label: "Descricao *" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 2517}}, React.createElement('input', { style: FI, value: form.descricao || "", onChange: e => F("descricao", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2517}} ))
@@ -51583,7 +51621,7 @@ function Fornecedores({ manutencoes, toast }) {
           )
         );
       })
-    , React.createElement(Modal, { open: modal, onClose: function(){ setModal(false); }, title: edit ? "Editar Fornecedor" : "Novo Fornecedor" }
+    , React.createElement(Modal, { open: modal, onClose: function(){ setModal(false); }, title: edit ? "Editar Fornecedor" : "Novo Fornecedor", wide: true }
       , React.createElement('div', { style: { display: "flex", flexDirection: "column", gap: 12 } }
         , React.createElement(Lbl, { label: "Nome *" }, React.createElement('input', { style: FI, value: form.nome || "", onChange: function(e){ F("nome", e.target.value); } }))
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
