@@ -30352,7 +30352,7 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
       var _COR_RESP  = { voce: C.red, cliente: C.blue, orgao: C.purple };
 
       var _mulSubHdr = function(g) {
-        var cor = _COR_RESP[g.id];
+        var cor = _COR_RESP[g.resp];
         return React.createElement('div', {
           key:'h-'+g.id,
           // O cabeçalho do grupo atravessa as duas colunas: ele é o que diz
@@ -30429,8 +30429,14 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
               , React.createElement('span', { style:{ background:C.border, borderRadius:5, padding:'1px 6px', fontWeight:700, letterSpacing:'0.5px', fontSize:11, color:_subToneTxt, flexShrink:0 } }, l.placa)
               , l.modelo ? React.createElement('span', { style:{ fontSize:12, color:_subToneTxt, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 } }, '\u00B7 '+l.modelo) : null
             )
+            /* Sem repetir a ação aqui: o cabeçalho do grupo (_mulSubHdr, um
+               por etapa) já diz exatamente o passo — "Aguardando o cliente
+               pagar" etc. — pra TODOS os cartões abaixo dele, então escrever
+               de novo em cada cartão só duplicava a mesma frase (pedido do
+               usuário). Sobra o que muda de cartão pra cartão: o nº do AIT
+               e o prazo. */
             , React.createElement('div', { style:{ display:'flex', alignItems:'center', gap:6, marginTop:5, minWidth:0 } }
-              , React.createElement('span', { style:{ fontSize:11, fontWeight:600, color:_flagCorPastel(cor), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 } }, l.acao + (l.ait ? ' · AIT '+l.ait : ''))
+              , React.createElement('span', { style:{ fontSize:11, fontWeight:600, color:_flagCorPastel(cor), overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', minWidth:0 } }, l.ait ? 'AIT '+l.ait : '—')
               , prazoTxt ? React.createElement('span', { style:{ fontSize:11, fontWeight:700, color:_flagCorPastel(corPrazo), whiteSpace:'nowrap', flexShrink:0 } }, prazoTxt) : null
             )
           )
@@ -35638,12 +35644,19 @@ var _RESP_ETAPA_MULTA = {
   cobrado_cli:  { resp: "cliente", acao: "Aguardando o cliente pagar",     prazo: "vencimento" },
 };
 /* Sem emoji e sem contagem: o cabeçalho do painel "Multas pendentes" mostra
-   só o título (pedido do usuário) — era o único lugar que lia esse campo. */
-var GRUPOS_MULTA = [
-  { id: "voce",    titulo: "Aguardando você" },
-  { id: "cliente", titulo: "Aguardando cliente pagar" },
-  { id: "orgao",   titulo: "Aguardando o órgão" },
-];
+   só o título (pedido do usuário) — era o único lugar que lia esse campo.
+   Um grupo por ETAPA (não por responsável): "Aguardando você" misturava
+   6 ações bem diferentes (enviar notificação, notificar o órgão, pagar o
+   órgão, cobrar do cliente...) sob um título só, e o cartão de cada multa
+   repetia a ação no corpo pra compensar — repetição que sumia quando dava
+   pra usar o AIT + prazo ali no lugar (pedido do usuário), MAS só sem
+   perder informação se o cabeçalho passar a dizer exatamente o passo, não
+   só de quem é a bola. Object.keys preserva a ordem de _RESP_ETAPA_MULTA
+   acima, que já é a ordem natural do pipeline (recebida → ... → cobrado). */
+var GRUPOS_MULTA = Object.keys(_RESP_ETAPA_MULTA).map(function(etapaId){
+  var r = _RESP_ETAPA_MULTA[etapaId];
+  return { id: etapaId, titulo: r.acao, resp: r.resp };
+});
 /* Ícone de traço (_flagIcon) por etapa do pipeline, pro selo branco do
    cartão de multa sem prazo (_dateBadgeFlag em _mulCard) — ver comentário
    em _flagIcon sobre o porquê do emoji cru ter saído de lá. */
@@ -35742,13 +35755,13 @@ function painelMultasPendentes(multas, contratos, veiculos, clientes) {
   }).filter(Boolean);
 
   return GRUPOS_MULTA.map(function (g) {
-    var itens = linhas.filter(function (l) { return l.resp === g.id; }).sort(function (a, b) {
+    var itens = linhas.filter(function (l) { return l.etapa === g.id; }).sort(function (a, b) {
       if (!a.prazo && !b.prazo) return b.valor - a.valor;
       if (!a.prazo) return 1;
       if (!b.prazo) return -1;
       return String(a.prazo).localeCompare(String(b.prazo));
     });
-    return { id: g.id, titulo: g.titulo, itens: itens,
+    return { id: g.id, titulo: g.titulo, resp: g.resp, itens: itens,
              total: itens.reduce(function (t, l) { return t + l.valor; }, 0) };
   }).filter(function (g) { return g.itens.length > 0; });
 }
