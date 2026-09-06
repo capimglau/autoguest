@@ -8,7 +8,7 @@
 <!-- Identificador do build. O workflow de deploy troca o placeholder abaixo pelo
      commit publicado; rodando local ele fica como está. Serve para detectar
      quando o navegador está servindo uma cópia velha do app. -->
-<meta name="ag-build" content="eed1b99"/>
+<meta name="ag-build" content="a28889d"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover"/>
 <meta name="theme-color" content="#FFFFFF" id="ag-theme-color"/>
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" id="ag-theme-color-dark"/>
@@ -17341,6 +17341,26 @@ body.midnight .agk2-ev-atraso, body.onix .agk2-ev-atraso{
     setTimeout(applyLayout, 600);
   });
 })();
+/* ── Normaliza valor monetário digitado (vírgula OU ponto decimal) ──
+   Os campos de Valor (R$) do app são <input type="number">, que só aceita
+   ponto como decimal e descarta a vírgula — em pt-BR isso trava a digitação
+   e atrapalha a seleção de texto no campo (o navegador trata o conteúdo
+   como número, não como texto normal). Usado nos campos convertidos pra
+   type="text" + inputMode="decimal": aceita vírgula ou ponto ao digitar e
+   guarda sempre com ponto (mesmo formato que todo o resto do sistema já lê
+   via parseFloat), sem precisar mexer em cada lugar que consome o valor.
+   window._mv (não `function _mv` local) porque os campos que a usam vivem
+   em componentes React de <script>s diferentes deste. */
+window._mv = function(v){
+  if(v==null)return '';
+  var s=String(v).trim();
+  if(!s)return '';
+  var neg = s.charAt(0)==='-';
+  s = s.replace(/[^0-9,.]/g,'');
+  if(s.indexOf(',')!==-1 && s.indexOf('.')!==-1) s = s.replace(/\./g,'').replace(',', '.');
+  else if(s.indexOf(',')!==-1) s = s.replace(',', '.');
+  return (neg?'-':'')+s;
+};
 /* ── FIX iOS PWA: bordas brancas em cima/embaixo no PRIMEIRO launch ──
    No iOS standalone, o WebKit às vezes mede o viewport errado no primeiro
    launch (status bar / safe areas ainda não assentaram), deixando faixas
@@ -29911,9 +29931,9 @@ function Inicio({ veiculos, setVeiculos, clientes, contratos, setContratos, rese
             , count !== null && React.createElement('div', {
                 style: count > 0
                   ? { background:cor+'18', border:'1px solid '+cor+'30', borderRadius:12,
-                      padding:'3px 10px', fontSize:14, fontWeight:800, color:cor, lineHeight:1.2 }
+                      padding:'3px 10px', fontSize:12, fontWeight:800, color:cor, lineHeight:1.2 }
                   : { background:'rgba(128,128,128,0.12)', border:'1px solid '+C.borderSoft, borderRadius:12,
-                      padding:'3px 10px', fontSize:14, fontWeight:800, color:C.sub, lineHeight:1.2 }
+                      padding:'3px 10px', fontSize:12, fontWeight:800, color:C.sub, lineHeight:1.2 }
               }, count)
           )
         );
@@ -31982,7 +32002,7 @@ function RentabilidadeWidget({ veiculos, contratos, despesas, receitas, manutenc
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1143}}
           , React.createElement(Lbl, { label: "Franquia KM" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1144}}, React.createElement('input', { style: FI, type: "number", value: form.km_franquia || "", onChange: e => F("km_franquia", e.target.value), placeholder: "Ex: 300" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1144}} ))
-          , React.createElement(Lbl, { label: "R$/KM excedente" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}}, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor_km_excedente || "", onChange: e => F("valor_km_excedente", e.target.value), placeholder: "Ex: 1.50" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}} ))
+          , React.createElement(Lbl, { label: "R$/KM excedente" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}}, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.valor_km_excedente || "", onChange: e => F("valor_km_excedente", _mv(e.target.value)), placeholder: "Ex: 1.50", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}} ))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
           , React.createElement(Lbl, { label: "Combustível — Saída", flex: 1 }
@@ -32013,7 +32033,7 @@ function RentabilidadeWidget({ veiculos, contratos, despesas, receitas, manutenc
               )
             )
             , React.createElement(Lbl, { label: "Valor Seguro/dia (R$)", flex: 1 }
-              , React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.seguro_valor_dia || "", onChange: function(e){ F("seguro_valor_dia", e.target.value); }, placeholder: "0,00" })
+              , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.seguro_valor_dia || "", onChange: function(e){ F("seguro_valor_dia", _mv(e.target.value)); }, placeholder: "0,00" })
             )
           )
           , React.createElement(Lbl, { label: "Franquia em caso de sinistro (% da FIPE)" }
@@ -32065,7 +32085,7 @@ function RentabilidadeWidget({ veiculos, contratos, despesas, receitas, manutenc
           React.createElement('div', { style: { background: C.orange + "10", borderRadius: 12, padding: "12px 14px", border: "1px solid " + C.orange + "40" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1153}}
             , React.createElement('div', { style: { fontSize: 12, fontWeight: 600, color: C.orange, marginBottom: 8 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1154}}, "Pagamento Parcial" )
             , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1155}}
-              , React.createElement(Lbl, { label: "Valor já pago (R$)"   , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "number", step: "0.01", min: "0", value: form.valor_pago || "", onChange: e => F("valor_pago", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}} ))
+              , React.createElement(Lbl, { label: "Valor já pago (R$)"   , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.valor_pago || "", onChange: e => F("valor_pago", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}} ))
               , React.createElement(Lbl, { label: "Saldo restante" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1157}}, React.createElement('input', { style: Object.assign({},FI,{background:"#f5f5f7",color:C.red,fontWeight:700}), readOnly: true, value: form.valor_total && form.valor_pago ? "R$ " + Math.max(0, parseFloat(form.valor_total||0) - parseFloat(form.valor_pago||0)).toFixed(2).replace(".",",") : "--", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1157}} ))
             )
           )
@@ -32089,7 +32109,7 @@ function RentabilidadeWidget({ veiculos, contratos, despesas, receitas, manutenc
               )
             )
             , React.createElement(Lbl, { label: "Valor (R$)", flex: 1 }
-              , React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.caucao_valor || "", onChange: function(e){ F("caucao_valor", e.target.value); }, placeholder: "0,00" })
+              , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.caucao_valor || "", onChange: function(e){ F("caucao_valor", _mv(e.target.value)); }, placeholder: "0,00" })
             )
           )
           , form.caucao_tipo && React.createElement('div', { style: { display: "flex", gap: 10 } }
@@ -32122,12 +32142,12 @@ function RentabilidadeWidget({ veiculos, contratos, despesas, receitas, manutenc
         , form.veiculo_id && form.data_inicio && form.data_fim && (
           React.createElement('div', { style: { background: C.bg, borderRadius: 12, padding: "12px 16px" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1182}}
             , React.createElement('div', { style: { display: "flex", gap: 10, marginBottom: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1183}}
-              , React.createElement(Lbl, { label: "Desconto (R$)" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red}), type: "number", step: "0.01", min: "0", value: form.desconto || "", onChange: e => F("desconto", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}} ))
-              , React.createElement(Lbl, { label: "Acrescimo (R$)" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green}), type: "number", step: "0.01", min: "0", value: form.acrescimo || "", onChange: e => F("acrescimo", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}} ))
+              , React.createElement(Lbl, { label: "Desconto (R$)" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.desconto || "", onChange: e => F("desconto", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}} ))
+              , React.createElement(Lbl, { label: "Acrescimo (R$)" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.acrescimo || "", onChange: e => F("acrescimo", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}} ))
             )
             , React.createElement('div', { style: { marginBottom: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1187}}
               , React.createElement(Lbl, { label: "Valor Total (editavel)", labelColor: C.green , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1188}}
-                , React.createElement('input', { style: Object.assign({}, FI, { fontWeight: 700, fontSize: 16, color: C.green }), type: "number", step: "0.01", value: form.valor_total !== undefined && form.valor_total !== "" ? form.valor_total : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2), onChange: e => F("valor_total", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1189}} )
+                , React.createElement('input', { style: Object.assign({}, FI, { fontWeight: 700, fontSize: 16, color: C.green }), type: "text", inputMode: "decimal", step: "0.01", value: form.valor_total !== undefined && form.valor_total !== "" ? form.valor_total : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2), onChange: e => F("valor_total", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1189}} )
               )
               , React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 4 } }, "Base calculada: ", React.createElement(BRLValue,{v:calcValor(form),size:11,weight:400,color:C.sub}), (function(){ var _d=dias(form); if(form.tipo_locacao==="mensal"){ var _m=Math.floor(_d/30); var _e=_d%30; return _m>0 ? " · "+_m+"× mensal"+(_e>0?" + "+_e+"d extra":"") : " · "+_d+"d proporcional"; } return " · "+_d+" dias"; })(), parseFloat(form.desconto||0)>0 ? [" · desc. ", React.createElement(BRLValue,{key:'d',v:form.desconto,size:11,weight:400,color:C.sub})] : "", parseFloat(form.acrescimo||0)>0 ? [" · acresc. ", React.createElement(BRLValue,{key:'a',v:form.acrescimo,size:11,weight:400,color:C.sub})] : "")
             )
@@ -32472,7 +32492,7 @@ function Frota({ veiculos, setVeiculos, contratos, clientes, toast }) {
           , React.createElement(Lbl, { label: "KM", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 561}}, React.createElement('input', { style: FI, type: "number", value: form.km || "", onChange: e => F("km", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 561}} ))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 563}}
-          , React.createElement(Lbl, { label: "Diaria (R$)" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 564}}, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor_diaria || "", onChange: e => F("valor_diaria", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 564}} ))
+          , React.createElement(Lbl, { label: "Diaria (R$)" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 564}}, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.valor_diaria || "", onChange: e => F("valor_diaria", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 564}} ))
           , React.createElement(Lbl, { label: "Status", flex: 1 },
               (function() {
                 var stBanco = form.status;
@@ -32500,7 +32520,7 @@ function Frota({ veiculos, setVeiculos, contratos, clientes, toast }) {
             React.createElement('textarea', { style: Object.assign({}, FI, { resize: "vertical", minHeight: 60 }), value: form.observacoes || "", onChange: e => F("observacoes", e.target.value), placeholder: "Ex: Vendido em 01/09/2026 para João Silva, CPF 000.000.000-00, tel (11) 90000-0000, por R$ 45.000" })
           )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 566}}
-          , React.createElement(Lbl, { label: "Mensal (R$)", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 566}}, React.createElement('input', { style: FI, type: "number", step: "1", value: form.valor_mensal || "", onChange: e => F("valor_mensal", e.target.value), placeholder: "Ex: 2500", __self: this, __source: {fileName: _jsxFileName, lineNumber: 566}} ))
+          , React.createElement(Lbl, { label: "Mensal (R$)", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 566}}, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "1", value: form.valor_mensal || "", onChange: e => F("valor_mensal", _mv(e.target.value)), placeholder: "Ex: 2500", __self: this, __source: {fileName: _jsxFileName, lineNumber: 566}} ))
         )
         , React.createElement(Lbl, { label: "Renavam", __self: this, __source: {fileName: _jsxFileName, lineNumber: 567}}, React.createElement('input', { style: FI, value: form.renavam || "", onChange: e => F("renavam", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 567}} ))
         , React.createElement(Lbl, { label: "Código FIPE (manual — ex: 005538-7)" }, React.createElement('input', { style: FI, value: form.fipe_codigo || "", maxLength: 8, onChange: function(e) {
@@ -32569,7 +32589,7 @@ function Frota({ veiculos, setVeiculos, contratos, clientes, toast }) {
           , React.createElement(Lbl, { label: "Seguradora", flex: 2 }, React.createElement('input', { style: FI, value: form.seguradora || "", onChange: e => F("seguradora", e.target.value), placeholder: "Porto Seguro, Azul…" }))
           , React.createElement(Lbl, { label: "Apólice", flex: 2 }, React.createElement('input', { style: FI, value: form.apolice || "", onChange: e => F("apolice", e.target.value), placeholder: "Número da apólice" }))
         )
-        , React.createElement(Lbl, { label: "Franquia (R$)" }, React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.seguro_franquia == null ? "" : form.seguro_franquia, onChange: e => F("seguro_franquia", e.target.value === "" ? null : parseFloat(e.target.value)), placeholder: "Valor da franquia" }))
+        , React.createElement(Lbl, { label: "Franquia (R$)" }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.seguro_franquia == null ? "" : form.seguro_franquia, onChange: e => F("seguro_franquia", e.target.value === "" ? null : _mv(e.target.value)), placeholder: "Valor da franquia" }))
 
         /* ── Rastreador ── custo recorrente que não aparecia em lugar nenhum. */
         , React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid " + C.border, paddingBottom: 4, marginTop: 6 } }, "Rastreador")
@@ -32579,7 +32599,7 @@ function Frota({ veiculos, setVeiculos, contratos, clientes, toast }) {
         )
         , form.rastreador && React.createElement('div', { style: { display: "flex", gap: 10 } }
           , React.createElement(Lbl, { label: "Fornecedor", flex: 2 }, React.createElement('input', { style: FI, value: form.rastreador_fornecedor || "", onChange: e => F("rastreador_fornecedor", e.target.value) }))
-          , React.createElement(Lbl, { label: "Mensalidade (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.rastreador_mensalidade == null ? "" : form.rastreador_mensalidade, onChange: e => F("rastreador_mensalidade", e.target.value === "" ? null : parseFloat(e.target.value)) }))
+          , React.createElement(Lbl, { label: "Mensalidade (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.rastreador_mensalidade == null ? "" : form.rastreador_mensalidade, onChange: e => F("rastreador_mensalidade", e.target.value === "" ? null : _mv(e.target.value)) }))
         )
 
         , React.createElement(Lbl, { label: "Sinistros / Observações"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 576}}, React.createElement('textarea', { style: Object.assign({}, FI, { resize: "vertical", minHeight: 60, fontSize: 13 }), value: form.sinistros || "", onChange: e => F("sinistros", e.target.value), placeholder: "Histórico de acidentes, danos, observações..."    , __self: this, __source: {fileName: _jsxFileName, lineNumber: 576}} ))
@@ -33140,7 +33160,7 @@ function ExtrasModalBody({ contrato, extrasList, setExtrasList, loading, veiculo
     , extrasList.map(function(e,i){ return (
       React.createElement('div', { key: i, style: { display:"flex", gap:8, alignItems:"flex-end", background:C.bg, borderRadius:12, padding:"10px 12px", flexWrap:"wrap" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 742}}
         , React.createElement(Lbl, { label: "Tipo", flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 743}}, React.createElement('select', { style: FI, value: e.tipo, onChange: function(ev){ updExtra(i,"tipo",ev.target.value); }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 743}}, TIPOS_EXTRA.map(function(t){ return React.createElement('option', { key: t, __self: this, __source: {fileName: _jsxFileName, lineNumber: 743}}, t); })))
-        , React.createElement(Lbl, { label: "Valor R$" , flex: 0, __self: this, __source: {fileName: _jsxFileName, lineNumber: 744}}, React.createElement('input', { style: Object.assign({},FI,{width:90}), type: "number", step: "0.01", value: e.valor, onChange: function(ev){ updExtra(i,"valor",ev.target.value); }, placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 744}} ))
+        , React.createElement(Lbl, { label: "Valor R$" , flex: 0, __self: this, __source: {fileName: _jsxFileName, lineNumber: 744}}, React.createElement('input', { style: Object.assign({},FI,{width:90}), type: "text", inputMode: "decimal", step: "0.01", value: e.valor, onChange: function(ev){ updExtra(i,"valor",_mv(ev.target.value)); }, placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 744}} ))
         , React.createElement(Lbl, { label: "Observação", flex: 2, __self: this, __source: {fileName: _jsxFileName, lineNumber: 745}}, React.createElement('input', { style: FI, value: e.obs||"", onChange: function(ev){ updExtra(i,"obs",ev.target.value); }, placeholder: "Detalhe...", __self: this, __source: {fileName: _jsxFileName, lineNumber: 745}} ))
         , React.createElement('button', { className: "lg-pill lg-ghost" , style: Object.assign({color:C.red},{marginBottom:2}), onClick: function(){ remExtra(i); }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 746}}, "✕")
       )
@@ -34896,7 +34916,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
           )
           , form.contrato_anual && React.createElement('div', { style: { display: "flex", gap: 10, marginTop: 10 } }
             , React.createElement(Lbl, { label: "Valor mensal (R$)", flex: 1 }
-              , React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.valor_mensal || "", onChange: function(e){ F("valor_mensal", e.target.value); }, placeholder: "= valor do contrato" })
+              , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.valor_mensal || "", onChange: function(e){ F("valor_mensal", _mv(e.target.value)); }, placeholder: "= valor do contrato" })
             )
             , React.createElement(Lbl, { label: "Multa rescisão (meses)", flex: 1 }
               , React.createElement('input', { style: FI, type: "number", step: "1", min: "0", value: form.multa_meses == null || form.multa_meses === "" ? "" : form.multa_meses, onChange: function(e){ F("multa_meses", e.target.value); }, placeholder: "2" })
@@ -34918,7 +34938,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1143}}
           , React.createElement(Lbl, { label: "Franquia KM" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1144}}, React.createElement('input', { style: FI, type: "number", value: form.km_franquia || "", onChange: e => F("km_franquia", e.target.value), placeholder: "Ex: 300" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1144}} ))
-          , React.createElement(Lbl, { label: "R$/KM excedente" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}}, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor_km_excedente || "", onChange: e => F("valor_km_excedente", e.target.value), placeholder: "Ex: 1.50" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}} ))
+          , React.createElement(Lbl, { label: "R$/KM excedente" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}}, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.valor_km_excedente || "", onChange: e => F("valor_km_excedente", _mv(e.target.value)), placeholder: "Ex: 1.50", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1145}} ))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
           , React.createElement(Lbl, { label: "Combustível — Saída", flex: 1 }
@@ -34964,7 +34984,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               )
             )
             , React.createElement(Lbl, { label: "Valor Seguro/dia (R$)", flex: 1 }
-              , React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.seguro_valor_dia || "", onChange: function(e){ F("seguro_valor_dia", e.target.value); }, placeholder: "0,00" })
+              , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.seguro_valor_dia || "", onChange: function(e){ F("seguro_valor_dia", _mv(e.target.value)); }, placeholder: "0,00" })
             )
           )
           , React.createElement(Lbl, { label: "Franquia em caso de sinistro (% da FIPE)" }
@@ -35031,7 +35051,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
           React.createElement('div', { style: { background: C.orange + "10", borderRadius: 12, padding: "12px 14px", border: "1px solid " + C.orange + "40" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1153}}
             , React.createElement('div', { style: { fontSize: 12, fontWeight: 600, color: C.orange, marginBottom: 8 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1154}}, "Pagamento Parcial" )
             , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1155}}
-              , React.createElement(Lbl, { label: "Valor já pago (R$)"   , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "number", step: "0.01", min: "0", value: form.valor_pago || "", onChange: e => F("valor_pago", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}} ))
+              , React.createElement(Lbl, { label: "Valor já pago (R$)"   , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.valor_pago || "", onChange: e => F("valor_pago", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1156}} ))
               , React.createElement(Lbl, { label: "Saldo restante" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1157}}, React.createElement('input', { style: Object.assign({},FI,{background:"#f5f5f7",color:C.red,fontWeight:700}), readOnly: true, value: form.valor_total && form.valor_pago ? "R$ " + Math.max(0, parseFloat(form.valor_total||0) - parseFloat(form.valor_pago||0)).toFixed(2).replace(".",",") : "--", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1157}} ))
             )
           )
@@ -35055,7 +35075,7 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
               )
             )
             , React.createElement(Lbl, { label: "Valor (R$)", flex: 1 }
-              , React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.caucao_valor || "", onChange: function(e){ F("caucao_valor", e.target.value); }, placeholder: "0,00" })
+              , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.caucao_valor || "", onChange: function(e){ F("caucao_valor", _mv(e.target.value)); }, placeholder: "0,00" })
             )
           )
           , form.caucao_tipo && React.createElement('div', { style: { display: "flex", gap: 10 } }
@@ -35179,12 +35199,12 @@ function Contratos({ contratos, setContratos, veiculos, setVeiculos, clientes, e
         , form.veiculo_id && form.data_inicio && form.data_fim && (
           React.createElement('div', { style: { background: C.bg, borderRadius: 12, padding: "12px 16px" }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1182}}
             , React.createElement('div', { style: { display: "flex", gap: 10, marginBottom: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1183}}
-              , React.createElement(Lbl, { label: "Desconto (R$)" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red}), type: "number", step: "0.01", min: "0", value: form.desconto || "", onChange: e => F("desconto", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}} ))
-              , React.createElement(Lbl, { label: "Acrescimo (R$)" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green}), type: "number", step: "0.01", min: "0", value: form.acrescimo || "", onChange: e => F("acrescimo", e.target.value), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}} ))
+              , React.createElement(Lbl, { label: "Desconto (R$)" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.desconto || "", onChange: e => F("desconto", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1184}} ))
+              , React.createElement(Lbl, { label: "Acrescimo (R$)" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green}), type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.acrescimo || "", onChange: e => F("acrescimo", _mv(e.target.value)), placeholder: "0,00", __self: this, __source: {fileName: _jsxFileName, lineNumber: 1185}} ))
             )
             , React.createElement('div', { style: { marginBottom: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1187}}
               , React.createElement(Lbl, { label: "Valor Total (editavel)", labelColor: C.green , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1188}}
-                , React.createElement('input', { style: Object.assign({}, FI, { fontWeight: 700, fontSize: 16, color: C.green }), type: "number", step: "0.01", value: form.valor_total !== undefined && form.valor_total !== "" ? form.valor_total : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2), onChange: e => F("valor_total", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1189}} )
+                , React.createElement('input', { style: Object.assign({}, FI, { fontWeight: 700, fontSize: 16, color: C.green }), type: "text", inputMode: "decimal", step: "0.01", value: form.valor_total !== undefined && form.valor_total !== "" ? form.valor_total : (parseFloat(calcValor(form)) - parseFloat(form.desconto||0) + parseFloat(form.acrescimo||0)).toFixed(2), onChange: e => F("valor_total", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1189}} )
               )
               , React.createElement('div', { style: { fontSize: 11, color: C.sub, marginTop: 4 } }, "Base calculada: ", React.createElement(BRLValue,{v:calcValor(form),size:11,weight:400,color:C.sub}), (function(){ var _d=dias(form); if(form.tipo_locacao==="mensal"){ var _m=Math.floor(_d/30); var _e=_d%30; return _m>0 ? " · "+_m+"× mensal"+(_e>0?" + "+_e+"d extra":"") : " · "+_d+"d proporcional"; } return " · "+_d+" dias"; })(), parseFloat(form.desconto||0)>0 ? [" · desc. ", React.createElement(BRLValue,{key:'d',v:form.desconto,size:11,weight:400,color:C.sub})] : "", parseFloat(form.acrescimo||0)>0 ? [" · acresc. ", React.createElement(BRLValue,{key:'a',v:form.acrescimo,size:11,weight:400,color:C.sub})] : "")
             )
@@ -36771,7 +36791,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, empresa, toa
               React.createElement('option', null, "Faixa de Pedestre"),
               React.createElement('option', null, "Documentação"),
               React.createElement('option', null, "Outro")))
-          , React.createElement(Lbl, { label: "Valor (R$) *", flex: 1 }, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor || "", onChange: function(e){F("valor", e.target.value);} }))
+          , React.createElement(Lbl, { label: "Valor (R$) *", flex: 1 }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.valor || "", onChange: function(e){F("valor", _mv(e.target.value));} }))
           , React.createElement(Lbl, { label: "Pontos", flex: 1 }, React.createElement('input', { style: FI, type: "number", value: form.pontos || "", onChange: function(e){F("pontos", e.target.value);} }))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
@@ -36967,7 +36987,7 @@ function Multas({ multas, setMultas, contratos, clientes, veiculos, empresa, toa
                     , React.createElement('input', { style:FI, type:"date", value:form.data_cobranca_cliente||"", onChange:function(e){F("data_cobranca_cliente",e.target.value);} })
                   )
                   , React.createElement(Lbl, { label:"Valor Cobrado (R$)", flex:1 }
-                    , React.createElement('input', { style:FI, type:"number", step:"0.01", value:form.valor_cobrado||"", onChange:function(e){F("valor_cobrado",e.target.value);}, placeholder:"Valor repassado" })
+                    , React.createElement('input', { style:FI, type:"text", inputMode:"decimal", step:"0.01", value:form.valor_cobrado||"", onChange:function(e){F("valor_cobrado",_mv(e.target.value));}, placeholder:"Valor repassado" })
                   )
                 )
                 : locked(React.createElement('div', { style:{display:"flex",gap:10} }
@@ -37746,7 +37766,7 @@ function Manutencao({ manutencoes, setManutencoes, veiculos, setVeiculos, despes
                 )
               : React.createElement('input', { style: FI, value: form.oficina || "", onChange: e => F("oficina", e.target.value), placeholder: "Cadastre fornecedores em Cadastro → Fornecedores" })
           )
-          , React.createElement(Lbl, { label: "Custo (R$)" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1590}}, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.custo || "", onChange: e => F("custo", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1590}} ))
+          , React.createElement(Lbl, { label: "Custo (R$)" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 1590}}, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.custo || "", onChange: e => F("custo", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1590}} ))
         )
         , React.createElement(Lbl, { label: "Previsão de Pagamento"  , __self: this, __source: {fileName: _jsxFileName, lineNumber: 1592}}, React.createElement('input', { style: FI, type: "date", value: form.data_previsao_pagamento || "", onChange: e => F("data_previsao_pagamento", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 1592}} ))
         , React.createElement(Lbl, { label: "Forma de Pagamento" }, React.createElement('select', { style: FI, value: (form.forma_pagamento||"").replace(/ \d+x$/,"") === "Cartao Credito" ? "Cartao Credito" : (form.forma_pagamento || "Pix"), onChange: function(e) {
@@ -40697,20 +40717,20 @@ function OrcamentosClientes({ veiculos, clientes, empresa, toast }) {
           , React.createElement(Lbl, { label: "Data fim", flex: 1 }, React.createElement('input', { style: FI, type: "date", value: form.data_fim || "", onChange: function(e) { F("data_fim", e.target.value); } }))
         )
         , dias > 0 && React.createElement('div', { style: { fontSize: 12, color: C.sub } }, dias + (dias === 1 ? " dia" : " dias") + " de locação")
-        , React.createElement(Lbl, { label: "Valor da diária *" }, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.valor_diaria || "", onChange: function(e) { F("valor_diaria", e.target.value); } }))
+        , React.createElement(Lbl, { label: "Valor da diária *" }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.valor_diaria || "", onChange: function(e) { F("valor_diaria", _mv(e.target.value)); } }))
 
         , React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 } }, "Itens adicionais")
         , itens.map(function(it, i) {
           return React.createElement('div', { key: i, style: { display: "flex", gap: 8, alignItems: "center" } }
             , React.createElement('input', { style: Object.assign({}, FI, { flex: 2 }), placeholder: "Descrição (ex: Seguro, KM livre...)", value: it.descricao || "", onChange: function(e) { setItemField(i, "descricao", e.target.value); } })
-            , React.createElement('input', { style: Object.assign({}, FI, { flex: 1 }), type: "number", step: "0.01", placeholder: "Valor", value: it.valor || "", onChange: function(e) { setItemField(i, "valor", e.target.value); } })
+            , React.createElement('input', { style: Object.assign({}, FI, { flex: 1 }), type: "text", inputMode: "decimal", step: "0.01", placeholder: "Valor", value: it.valor || "", onChange: function(e) { setItemField(i, "valor", _mv(e.target.value)); } })
             , React.createElement('button', { onClick: function() { delItem(i); }, style: { background: "transparent", border: "none", color: C.red, fontSize: 18, cursor: "pointer", padding: "4px 8px" } }, "✕")
           );
         })
         , React.createElement('button', { className: bCls(Ghost(C.blue)), style: bStyle(Ghost(C.blue)), onClick: addItem }, "+ Adicionar item")
 
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
-          , React.createElement(Lbl, { label: "Desconto", flex: 1 }, React.createElement('input', { style: FI, type: "number", step: "0.01", value: form.desconto || "0", onChange: function(e) { F("desconto", e.target.value); } }))
+          , React.createElement(Lbl, { label: "Desconto", flex: 1 }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: form.desconto || "0", onChange: function(e) { F("desconto", _mv(e.target.value)); } }))
           , React.createElement(Lbl, { label: "Validade (dias)", flex: 1 }, React.createElement('input', { style: FI, type: "number", min: "1", value: form.validade_dias || 5, onChange: function(e) { F("validade_dias", e.target.value); } }))
         )
         , React.createElement(Lbl, { label: "Observações / condições" }, React.createElement('textarea', { style: Object.assign({}, FI, { resize: "vertical", minHeight: 70 }), value: form.observacoes || "", onChange: function(e) { F("observacoes", e.target.value); }, placeholder: "Ex: Pagamento via Pix, quilometragem livre, seguro incluso..." }))
@@ -42627,7 +42647,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
               return React.createElement('div', { key: cat, style: { marginBottom: 12 } }
                 , React.createElement('div', { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } }
                   , React.createElement('div', { style: { fontSize: 13, fontWeight: 600, flex: 1, minWidth: 0 } }, cat)
-                  , React.createElement('input', { style: Object.assign({}, FI, { width: 110, fontSize: 12, padding: "4px 8px" }), type: "number", step: "0.01", placeholder: "teto R$", value: budgets[cat] || "", onChange: function(e){ var nb = Object.assign({}, budgets, { [cat]: e.target.value }); localStorage.setItem(BUD_KEY, JSON.stringify(nb)); setBudgetsState(nb); } })
+                  , React.createElement('input', { style: Object.assign({}, FI, { width: 110, fontSize: 12, padding: "4px 8px" }), type: "text", inputMode: "decimal", step: "0.01", placeholder: "teto R$", value: budgets[cat] || "", onChange: function(e){ var nb = Object.assign({}, budgets, { [cat]: _mv(e.target.value) }); localStorage.setItem(BUD_KEY, JSON.stringify(nb)); setBudgetsState(nb); } })
                   , React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: cor, width: 120, textAlign: "right" } }, React.createElement(BRLValue,{v:gasto,size:12,weight:700,color:cor}), teto > 0 ? [" / ", React.createElement(BRLValue,{key:'t',v:teto,size:12,weight:700,color:cor})] : "")
                 )
                 , teto > 0 && React.createElement('div', { style: { marginTop: 4, background: C.bg, borderRadius: 4, height: 6, overflow: "hidden" } }
@@ -42866,9 +42886,9 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
           React.createElement('div',{className:CARD_CLS,style:{background:"var(--c-card)",borderRadius:18,border:"1px solid "+C.border,padding:16}},
             React.createElement('div',{style:{fontSize:12,fontWeight:700,marginBottom:10}},"\uD83C\uDFAF Meta de Faturamento Mensal"),
             React.createElement('div',{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10}},
-              React.createElement('input',{style:Object.assign({},FI,{flex:1,fontSize:13}),type:"number",step:"100",
+              React.createElement('input',{style:Object.assign({},FI,{flex:1,fontSize:13}),type:"text",inputMode:"decimal",step:"100",
                 placeholder:"Definir meta R$",defaultValue:metaFat||"",
-                onBlur:function(e){ var v=parseFloat(e.target.value||0); localStorage.setItem(META_KEY,String(v)); toast("Meta salva!"); }
+                onBlur:function(e){ var v=parseFloat(_mv(e.target.value)||0); localStorage.setItem(META_KEY,String(v)); toast("Meta salva!"); }
               }),
               React.createElement(BRLValue,{v:metaFat,size:12,weight:700,color:C.sub,style:{whiteSpace:"nowrap"}})
             ),
@@ -43037,8 +43057,8 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
                   React.createElement('div',{style:{flex:1,fontSize:13,fontWeight:600}},
                     (p>=100?"\uD83D\uDD34 ":p>=80?"\uD83D\uDFE1 ":"\uD83D\uDFE2 ")+cat),
                   React.createElement('input',{style:Object.assign({},FI,{width:94,fontSize:12,padding:"4px 8px"}),
-                    type:"number",step:"0.01",placeholder:"Meta R$",defaultValue:budEmp[cat]||"",
-                    onChange:function(e){ var nb=Object.assign({},budEmp,{[cat]:e.target.value}); saveBudEmp(nb); }, onBlur:function(){ toast("Meta salva!"); }
+                    type:"text",inputMode:"decimal",step:"0.01",placeholder:"Meta R$",defaultValue:budEmp[cat]||"",
+                    onChange:function(e){ var nb=Object.assign({},budEmp,{[cat]:_mv(e.target.value)}); saveBudEmp(nb); }, onBlur:function(){ toast("Meta salva!"); }
                   }),
                   React.createElement('div',{style:{fontSize:11,fontWeight:700,color:cor,width:106,textAlign:"right",flexShrink:0}},
                     React.createElement(BRLValue,{v:g,size:11,weight:700,color:cor}),t>0?[" /\n",React.createElement(BRLValue,{key:'t',v:t,size:11,weight:700,color:cor})]:"")
@@ -44070,7 +44090,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         , modalTipo === "despesa" && React.createElement(React.Fragment, null
           , React.createElement(Lbl, { label: "Descricao *" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 2517}}, React.createElement('input', { style: FI, value: form.descricao || "", onChange: e => F("descricao", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2517}} ))
           , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2518}}
-            , React.createElement(Lbl, { label: "Valor *" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2519}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red,fontWeight:700}), type: "number", step: "0.01", value: form.valor || "", onChange: e => F("valor", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2519}} ))
+            , React.createElement(Lbl, { label: "Valor *" , flex: 1, labelColor: C.red, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2519}}, React.createElement('input', { style: Object.assign({},FI,{color:C.red,fontWeight:700}), type: "text", inputMode: "decimal", step: "0.01", value: form.valor || "", onChange: e => F("valor", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2519}} ))
             , React.createElement(Lbl, { label: "Data *" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2520}}, React.createElement('input', { style: FI, type: "date", value: form.data || "", onChange: e => F("data", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2520}} ))
           )
           , React.createElement(Lbl, { label: "Categoria", __self: this, __source: {fileName: _jsxFileName, lineNumber: 2522}}, React.createElement('select', { style: FI, value: form.categoria || "Outros", onChange: e => F("categoria", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2522}}, CATS_DESP.map(c => React.createElement('option', { key: c, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2522}}, c))))
@@ -44132,7 +44152,7 @@ function Financeiro({ despesas, setDespesas, receitas, setReceitas, contas, setC
         , modalTipo === "receita" && React.createElement(React.Fragment, null
           , React.createElement(Lbl, { label: "Descricao *" , __self: this, __source: {fileName: _jsxFileName, lineNumber: 2538}}, React.createElement('input', { style: FI, value: form.descricao || "", onChange: e => F("descricao", e.target.value), placeholder: "Ex: Locacao avulsa, Servico de higienizacao..."     , __self: this, __source: {fileName: _jsxFileName, lineNumber: 2538}} ))
           , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2539}}
-            , React.createElement(Lbl, { label: "Valor *" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2540}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "number", step: "0.01", value: form.valor || "", onChange: e => F("valor", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2540}} ))
+            , React.createElement(Lbl, { label: "Valor *" , flex: 1, labelColor: C.green, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2540}}, React.createElement('input', { style: Object.assign({},FI,{color:C.green,fontWeight:700}), type: "text", inputMode: "decimal", step: "0.01", value: form.valor || "", onChange: e => F("valor", _mv(e.target.value)), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2540}} ))
             , React.createElement(Lbl, { label: "Data *" , flex: 1, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2541}}, React.createElement('input', { style: FI, type: "date", value: form.data || "", onChange: e => F("data", e.target.value), __self: this, __source: {fileName: _jsxFileName, lineNumber: 2541}} ))
           )
           , React.createElement('div', { style: { display: "flex", gap: 10 }, __self: this, __source: {fileName: _jsxFileName, lineNumber: 2543}}
@@ -45460,7 +45480,7 @@ function Config({ empresa, setEmpresa, toast, darkMode, toggleDark, setThemeDire
             , React.createElement('input', { style: FI, type: "number", inputMode: "decimal", value: prefs.kmFranquia, onChange: function(e){ P("kmFranquia", e.target.value); }, placeholder: "ex. 200" })
           )
           , React.createElement(Lbl, { label: "R$ km excedente", flex: 1 }
-            , React.createElement('input', { style: FI, type: "number", inputMode: "decimal", step: "0.01", value: prefs.valorKmExc, onChange: function(e){ P("valorKmExc", e.target.value); }, placeholder: "ex. 1.50" })
+            , React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", value: prefs.valorKmExc, onChange: function(e){ P("valorKmExc", _mv(e.target.value)); }, placeholder: "ex. 1.50" })
           )
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
@@ -50933,8 +50953,8 @@ function Simulador({ veiculos, contratos, despesas, manutencoes, multas, receita
 
         React.createElement('div', { style:{ gridColumn:"1 / -1" } },
           React.createElement('label', { style:{ fontSize:12, color:C.sub, display:"block", marginBottom:4 } }, "Custo de Aquisição (R$) *"),
-          React.createElement('input', { type:"number", placeholder: fipeValor ? "ou use a FIPE: " + fipeValor.valorStr : "Ex: 75000",
-            value:custoAquisicao, onChange:function(e){ setCustoAquisicao(e.target.value); },
+          React.createElement('input', { type:"text", inputMode:"decimal", placeholder: fipeValor ? "ou use a FIPE: " + fipeValor.valorStr : "Ex: 75000",
+            value:custoAquisicao, onChange:function(e){ setCustoAquisicao(_mv(e.target.value)); },
             style:{ ...inpStyle, fontSize:16, fontWeight:700, border:"1.5px solid rgba(0,122,255,0.3)", background:"rgba(0,122,255,0.04)" } })
         ),
 
@@ -51036,8 +51056,8 @@ function Simulador({ veiculos, contratos, despesas, manutencoes, multas, receita
             "Seguro anual (R$)",
             custo > 0 && seguroAnual === "" && React.createElement('span', { style:{ color:C.blue, marginLeft:4 } }, "← ref: R$ " + Math.round(custo*bench.seguroAliq).toLocaleString("pt-BR"))
           ),
-          React.createElement('input', { type:"number", placeholder: custo > 0 ? String(Math.round(custo*bench.seguroAliq)) : "Ex: 3500",
-            value:seguroAnual, onChange:function(e){ setSeguroAnual(e.target.value); }, style:inpStyle })
+          React.createElement('input', { type:"text", inputMode:"decimal", placeholder: custo > 0 ? String(Math.round(custo*bench.seguroAliq)) : "Ex: 3500",
+            value:seguroAnual, onChange:function(e){ setSeguroAnual(_mv(e.target.value)); }, style:inpStyle })
         ),
 
         // Manutenção por km
@@ -51388,7 +51408,7 @@ function Tarifas({ veiculos, setVeiculos, toast }) {
               , [["Diária (R$/dia)","valor_diaria","Ex: 150"],["Semanal (R$/7d)","valor_semanal","Ex: 900"],["Quinzenal (R$/15d)","valor_quinzenal","Ex: 1600"],["Mensal (R$/mês)","valor_mensal","Ex: 2800"]].map(function(row){
                   return React.createElement('div',{key:row[1]}
                     , React.createElement('span',{style:LBL2},row[0])
-                    , React.createElement('input',{style:FI2,type:"number",step:"0.01",min:"0",placeholder:row[2],value:form[row[1]]||"",onChange:function(e){var k=row[1];var val=e.target.value;setForm(function(p){var n=Object.assign({},p);n[k]=val;return n;}); }})
+                    , React.createElement('input',{style:FI2,type:"text",inputMode:"decimal",step:"0.01",min:"0",placeholder:row[2],value:form[row[1]]||"",onChange:function(e){var k=row[1];var val=_mv(e.target.value);setForm(function(p){var n=Object.assign({},p);n[k]=val;return n;}); }})
                   );
                 })
             )
@@ -51399,7 +51419,7 @@ function Tarifas({ veiculos, setVeiculos, toast }) {
               )
               , React.createElement('div',null
                 , React.createElement('span',{style:LBL2},"R$/KM Excedente")
-                , React.createElement('input',{style:FI2,type:"number",step:"0.01",min:"0",placeholder:"Ex: 1.50",value:form.valor_km_exc||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{valor_km_exc:e.target.value});});}})
+                , React.createElement('input',{style:FI2,type:"text",inputMode:"decimal",step:"0.01",min:"0",placeholder:"Ex: 1.50",value:form.valor_km_exc||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{valor_km_exc:_mv(e.target.value)});});}})
               )
             )
             , React.createElement('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}
@@ -51415,11 +51435,11 @@ function Tarifas({ veiculos, setVeiculos, toast }) {
             , React.createElement('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}
               , React.createElement('div',null
                 , React.createElement('span',{style:LBL2},"Taxa condutor adicional (R$)")
-                , React.createElement('input',{style:FI2,type:"number",step:"0.01",min:"0",placeholder:"Ex: 30",value:form.taxa_condutor_adicional||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{taxa_condutor_adicional:e.target.value});});}})
+                , React.createElement('input',{style:FI2,type:"text",inputMode:"decimal",step:"0.01",min:"0",placeholder:"Ex: 30",value:form.taxa_condutor_adicional||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{taxa_condutor_adicional:_mv(e.target.value)});});}})
               )
               , React.createElement('div',null
                 , React.createElement('span',{style:LBL2},"Taxa entrega/busca (R$)")
-                , React.createElement('input',{style:FI2,type:"number",step:"0.01",min:"0",placeholder:"Ex: 50",value:form.taxa_entrega_busca||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{taxa_entrega_busca:e.target.value});});}})
+                , React.createElement('input',{style:FI2,type:"text",inputMode:"decimal",step:"0.01",min:"0",placeholder:"Ex: 50",value:form.taxa_entrega_busca||"",onChange:function(e){setForm(function(p){return Object.assign({},p,{taxa_entrega_busca:_mv(e.target.value)});});}})
               )
             )
             , form.valor_diaria && parseFloat(form.valor_diaria)>0 && React.createElement('div',{style:{background:"rgba(0,122,255,0.07)",border:"1px solid rgba(0,122,255,0.2)",borderRadius:10,padding:"10px 12px"}}
@@ -51772,8 +51792,8 @@ function Sinistros({ veiculos, clientes, contratos, toast }) {
               , STATUS.map(function(s){ return React.createElement('option', { key: s.id, value: s.id }, s.label); })))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
-          , React.createElement(Lbl, { label: "Prejuízo (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.valor_prejuizo == null ? "" : form.valor_prejuizo, onChange: function(e){ F("valor_prejuizo", e.target.value); } }))
-          , React.createElement(Lbl, { label: "Franquia (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "number", step: "0.01", min: "0", value: form.valor_franquia == null ? "" : form.valor_franquia, onChange: function(e){ F("valor_franquia", e.target.value); } }))
+          , React.createElement(Lbl, { label: "Prejuízo (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.valor_prejuizo == null ? "" : form.valor_prejuizo, onChange: function(e){ F("valor_prejuizo", _mv(e.target.value)); } }))
+          , React.createElement(Lbl, { label: "Franquia (R$)", flex: 1 }, React.createElement('input', { style: FI, type: "text", inputMode: "decimal", step: "0.01", min: "0", value: form.valor_franquia == null ? "" : form.valor_franquia, onChange: function(e){ F("valor_franquia", _mv(e.target.value)); } }))
         )
         , React.createElement('div', { style: { display: "flex", gap: 10 } }
           , React.createElement(Lbl, { label: "Nº do sinistro", flex: 1 }, React.createElement('input', { style: FI, value: form.numero_sinistro || "", onChange: function(e){ F("numero_sinistro", e.target.value); } }))
